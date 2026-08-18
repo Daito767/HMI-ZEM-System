@@ -6,7 +6,9 @@ OPC UA. It runs on an Android tablet (the primary target) and on Windows.
 > **A note on language.** Documentation and code comments are in English. The interface itself is in
 > Romanian, because the stand is operated in Romanian — so every on-screen label quoted below is
 > given in Romanian, exactly as it appears. Operators get `docs/USER-MANUAL.md`, whose Romanian
-> edition is handed out as a PDF.
+> edition is handed out as a PDF: its source and the script that builds it live in `manual-ro/`,
+> next to the project but gitignored, so that everything inside the repository stays English. When
+> one of the two manuals changes, the other one changes with it.
 
 ## Read this before anything else
 
