@@ -78,3 +78,10 @@ Stated here rather than buried, because none of them is finished work:
   not.
 - **`maui_splash_image.xml` comes out empty** whatever `splash.svg` contains. On Android 12+ it does
   not matter — the system draws the icon on the background colour.
+
+## License
+
+MIT — see [`LICENSE`](LICENSE). Use it, change it, build on it; just keep the copyright notice.
+
+The stand drawings in `wwwroot/cell/` come from the machine's original CODESYS visualization and
+depict Bosch Rexroth hardware. They are included because the application does not run without them.
