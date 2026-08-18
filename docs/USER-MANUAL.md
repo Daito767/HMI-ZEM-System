@@ -378,4 +378,3 @@ This manual stops at what is visible on screen. What lies underneath is in:
 | `HMI-HANDOFF.md` (root) | the application structure, the styling decisions, the safety rules, the traps already paid for, and the dimensions taken from the stand drawings |
 | `docs/OPCUA-HMI.md` | the variables the PLC publishes, their types, and what the HMI is allowed to write |
 | `docs/HMI-CONTEXT.md` | what each page of the old HMI displayed and what PLC logic sits behind each button |
-| `docs/PLC-HANDOFF.md` | context about the stand and about the CODESYS project |

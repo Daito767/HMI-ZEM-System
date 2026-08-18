@@ -16,10 +16,10 @@ OPC UA. It runs on an Android tablet (the primary target) and on Windows.
 |---|---|
 | `docs/OPCUA-HMI.md` | the 755 published variables, types, enums, what the HMI is allowed to write |
 | `docs/HMI-CONTEXT.md` | what each page of the old HMI displayed and what logic sits behind it |
-| `docs/PLC-HANDOFF.md` | context about the stand |
 | `docs/USER-MANUAL.md` | the operator's manual: workflows, alarms, known limitations |
 
-The first two are enough. The CODESYS project does not need to be opened.
+The first two are enough. The CODESYS project does not need to be opened, and its own handover
+document is not carried here — it describes that project's tooling and working tree, not this one.
 
 ## How to work with the user
 
@@ -32,8 +32,7 @@ The first two are enough. The CODESYS project does not need to be opened.
 ## Structure
 
 ```
-docs/                      OPCUA-HMI, HMI-CONTEXT, PLC-HANDOFF, USER-MANUAL and the trace of the
-                           old visualization
+docs/                      OPCUA-HMI, HMI-CONTEXT, USER-MANUAL
 ZEM_BoschRexrothSystemByASTI/
   Plc/                     the communication layer and the model
     PlcSymbols.cs          the logical names of every variable + the read groups
@@ -71,7 +70,8 @@ attic/                     pages taken out of the build, kept on disk only - git
 
 ## Style
 
-A dark theme, following the patterns of the old HMI (its screenshots are in `docs/old-hmi/`).
+A dark theme, following the patterns of the old HMI. Its screenshots are not in the repository — the
+patterns worth keeping are written down below.
 
 Two layout conventions, kept everywhere:
 

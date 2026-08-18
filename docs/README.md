@@ -4,28 +4,31 @@
 operation and the known limitations. The only document here written for the operator. Its Romanian
 edition is handed out as a PDF, because the stand is operated in Romanian.
 
-The rest is what cannot be reconstructed from the code: the description of the PLC and the trace of
-the visualization that ran on the target before this application. The starting point for any work on
-the HMI remains `HMI-HANDOFF.md`, in the root.
+The other two are what cannot be reconstructed from the code: what the PLC publishes, and what the
+logic behind each button does. The starting point for any work on the HMI remains `HMI-HANDOFF.md`,
+in the root.
 
 | file | what it holds |
 |---|---|
 | `USER-MANUAL.md` | the operator's manual, organised around workflows |
 | `OPCUA-HMI.md` | the 755 published variables, types, enums, what the HMI is allowed to write, and the recipe for drawing the cell |
 | `HMI-CONTEXT.md` | what each page of the old HMI displayed and what PLC logic sits behind each button |
-| `PLC-HANDOFF.md` | context about the stand and about the CODESYS project. The paths in it point at tools and working trees that are **not** in this project |
 
-## `old-hmi/`
+Between them, `OPCUA-HMI.md` and `HMI-CONTEXT.md` are enough to work on the interface. The CODESYS
+project does not need to be opened.
 
-The CODESYS visualization this application replaces. Nothing here runs any more — it was kept
-because it is the only source for a few things that do not show in the drawings.
+## What is deliberately not here
 
-| file | why it matters |
-|---|---|
-| `top_view.js`, `front_view.js`, `top_pallete_animation.js` | the constants in `StandGeometry` come from here: puller travel, queue pitch, the belt's reference distance, column offset |
-| `custom.tools.js`, `*_scale_provider.js` | the px/mm scale bus. It has no counterpart any more: movements are now written in percentages |
-| `layers-top.png`, `layers-front.png` | the layer tree of the old visualization — the only source for the drawing order |
-| `page-*.png` | screenshots of the HMI on the basic system. The Pneumatic page is the one that settles that there is **a single** vertical piston, not one each for the gripper and the vacuum |
-| `unused-svg/` | two drawings from the original set that did not make it into `wwwroot/cell/`: the rail variant of the upgraded system, with pushers, and an empty canvas |
+**The CODESYS project's own handover document.** It describes a different project — its tooling, its
+working tree, its session workflow — and its paths point at things that are not part of this
+repository. It stays next to that project.
 
-The drawings in use are in `ZEM_BoschRexrothSystemByASTI/wwwroot/cell/`, renamed to kebab-case.
+**The old CODESYS visualization** (its JavaScript, the layer-tree screenshots, the pages of the HMI
+on the basic system). It is where the constants in `StandGeometry` came from — puller travel, queue
+pitch, the belt's reference distance, column offset — and the screenshots are what settled that the
+stand has a single vertical piston rather than one each for the gripper and the vacuum. All of that
+is already recorded in `HMI-HANDOFF.md`, under "The stand drawings", so the files themselves are
+kept outside the repository rather than carried along with it.
+
+The drawings actually in use are in `ZEM_BoschRexrothSystemByASTI/wwwroot/cell/`, renamed to
+kebab-case.
