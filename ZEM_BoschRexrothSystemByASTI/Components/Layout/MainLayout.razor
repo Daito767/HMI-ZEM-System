@@ -1,0 +1,180 @@
+﻿@inherits LayoutComponentBase
+@using ZEM_BoschRexrothSystemByASTI.Plc
+@implements IDisposable
+@inject PlcService Plc
+@inject IJSRuntime JS
+
+<div class="hmi">
+    <header class="hmi-top">
+        @* The same mark as the application icon: the four slots of a pallet, with the unscanned cell
+           at the top left. At 26px the question mark is more of a trace, but the shape still reads. *@
+        <svg class="mark" viewBox="0 0 100 100" aria-hidden="true">
+            <rect x="2" y="2" width="44" height="44" rx="8"
+                  fill="#990000" fill-opacity="0.3" stroke="#b0343a" stroke-width="2.5" stroke-dasharray="5 4"/>
+            <path d="M17.8,17.3 A6.2,6.2 0 0 1 30.2,17.3 C30.2,23.5 24,23.5 24,28.3"
+                  fill="none" stroke="#e8888c" stroke-width="3.3" stroke-linecap="round"/>
+            <circle cx="24" cy="34.5" r="2.4" fill="#e8888c"/>
+
+            <rect x="54" y="2" width="44" height="44" rx="8" fill="#FFFFFF"/>
+            <rect x="2" y="54" width="44" height="44" rx="8" fill="#FFFFFF"/>
+            <rect x="54" y="54" width="44" height="44" rx="8" fill="#FF0000"/>
+        </svg>
+        <div class="name">HMI ZEM SYSTEM</div>
+
+        <span class="pill @(Plc.Cell.Run ? "ok" : Plc.Cell.ResetStarted ? "busy" : "")">
+            <span class="led"></span>
+            <span class="value">@RunText</span>
+        </span>
+
+        @* The server address tells the operator nothing and eats half the bar. Whoever needs it
+           finds it on Service → Conexiune. *@
+        <span class="pill @LinkClass">
+            <span class="led"></span>
+            <span class="value">@LinkText</span>
+        </span>
+
+        @if (Plc.IsSimulated)
+        {
+            <span class="pill warn"><span class="led"></span><span class="value">SIMULATOR</span></span>
+        }
+
+        @* The alarm is its own mute button: press it and the sound starts or stops. Silenced, it
+           stays on the bar — the sound went quiet, not the fault. The led blinks while it sounds and
+           sits lit when it does not, and "MUT" is written only in the out-of-the-ordinary case, as
+           everywhere else. *@
+        @foreach (var alarm in _alarms)
+        {
+            var muted = _silenced.Contains(alarm.Key);
+            <button class="pill bad alarm @(muted ? "muted" : "sounding")"
+                    @onclick="() => Toggle(alarm.Key)"
+                    title="@(muted ? "apasa ca sa sune din nou" : "apasa ca sa amutesti")">
+                <span class="led"></span>
+                <span class="value">@alarm.Text</span>
+                @if (muted)
+                {
+                    <span class="key">MUT</span>
+                }
+            </button>
+        }
+
+        <span class="spacer"></span>
+
+        <span class="pill">
+            <span class="key">actualizat</span>
+            <span class="value">@Plc.Cell.UpdatedAt.ToString("HH:mm:ss")</span>
+        </span>
+    </header>
+
+    <nav class="hmi-nav">
+        <NavMenu/>
+    </nav>
+
+    <main class="hmi-main">
+        @Body
+    </main>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    A aparut o eroare neasteptata.
+    <a href="." class="reload">Reincarca</a>
+    <span class="dismiss">🗙</span>
+</div>
+
+@code {
+    private DotNetObjectReference<MainLayout>? _self;
+
+    private IReadOnlyList<Alarm> _alarms = Array.Empty<Alarm>();
+
+    /// <summary>The alarms the operator has already heard and silenced.</summary>
+    private HashSet<string> _silenced = new();
+
+    private bool _sounding;
+    private bool _sounded;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Plc.Updated += OnChanged;
+        Plc.LinkChanged += OnChanged;
+        Look();
+        await Plc.StartAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Losing focus or closing the window has to drop the command flags: the PLC has no
+            // watchdog on the session and would keep a jog running.
+            _self = DotNetObjectReference.Create(this);
+            try
+            {
+                await JS.InvokeVoidAsync("hmiSafety.register", _self);
+                await JS.InvokeVoidAsync("hmiAlarm.listen");
+            }
+            catch (JSException) { /* the page is going away */ }
+        }
+
+        // The state was worked out before the render; here only the sound follows it.
+        if (_sounded == _sounding) return;
+        _sounded = _sounding;
+
+        try { await JS.InvokeVoidAsync("hmiAlarm.set", _sounding); }
+        catch (JSException) { /* the page is going away */ }
+    }
+
+    /// <summary>
+    /// Silencing is per alarm, so a second fault on top of a silenced one is still heard - and the
+    /// same press brings the sound back.
+    /// </summary>
+    private void Toggle(string key)
+    {
+        if (!_silenced.Add(key)) _silenced.Remove(key);
+        Look();
+    }
+
+    private void Look()
+    {
+        _alarms = Alarms.Of(Plc);
+
+        // An alarm that has gone is forgotten rather than kept silenced, so if it comes back the
+        // operator hears it again.
+        _silenced.IntersectWith(_alarms.Select(a => a.Key));
+        _sounding = _alarms.Any(a => !_silenced.Contains(a.Key));
+    }
+
+    [JSInvokable]
+    public Task ReleaseAllFlags() => Plc.ReleaseAllFlagsAsync();
+
+    private void OnChanged() => InvokeAsync(() =>
+    {
+        Look();
+        StateHasChanged();
+    });
+
+    private string LinkClass => Plc.LinkState switch
+    {
+        PlcLinkState.Online => "ok",
+        PlcLinkState.Connecting => "busy",
+        PlcLinkState.Faulted => "bad",
+        _ => ""
+    };
+
+    private string LinkText => Plc.LinkState switch
+    {
+        PlcLinkState.Online => "CONECTAT",
+        PlcLinkState.Connecting => "CONECTARE",
+        PlcLinkState.Faulted => "EROARE",
+        _ => "DECONECTAT"
+    };
+
+    // ResetStarted means "se reseteaza", not "oprit" - the operator has to be able to tell them apart.
+    // Automatic or manual is the same fact as Run, so it is said once, here.
+    private string RunText => Plc.Cell.ResetStarted ? "SE RESETEAZA" : Plc.Cell.Run ? "AUTO" : "MANUAL";
+
+    public void Dispose()
+    {
+        Plc.Updated -= OnChanged;
+        Plc.LinkChanged -= OnChanged;
+        _self?.Dispose();
+    }
+}

@@ -1,0 +1,172 @@
+
+@inherits PlcComponentBase
+
+@* The browse path differs from server to server, so binding is done by searching, not by a fixed
+   path. This page shows the result: what bound and what did not, and under it the address space as
+   browse found it. Without it, an unbound symbol would look in the interface exactly like a zero
+   coming from the PLC. *@
+
+<div class="banner @(Unbound == 0 ? "ok" : "warn")">
+    <strong>@Bound / @Plc.Bindings.Count simboluri legate</strong>
+    @if (Plc.ApplicationPath is { Length: > 0 } path)
+    {
+        <span class="dim">radacina: <span class="mono">@path</span></span>
+    }
+    @if (Plc.BrowsedVariables.Count > 0)
+    {
+        <span class="dim">@Plc.BrowsedVariables.Count variabile gasite la browse</span>
+    }
+    <span class="spacer"></span>
+    @if (Unbound > 0)
+    {
+        <span class="pill warn"><span class="led"></span><span class="value">@Unbound nelegate</span></span>
+    }
+</div>
+
+@* Which of the two is delivering the values does not show in the interface: a dead subscription
+   looks like a live one, only the picture freezes. So it is written here, next to the bindings. *@
+@if (Plc.LinkState == PlcLinkState.Online && !Plc.IsSimulated)
+{
+    <div class="banner @(Plc.IsLive ? "ok" : "warn")" style="margin-top:10px">
+        @if (Plc.IsLive)
+        {
+            <strong>Serverul trimite @Plc.LiveNodeCount noduri, la @Plc.UpdatePeriodMs ms</strong>
+            @if (Plc.SamplingIntervalMs > 0)
+            {
+                <span class="@(Plc.SamplingIntervalMs > Plc.UpdatePeriodMs ? "pill warn" : "dim")"
+                      title="cat de des se uita serverul la valoare; daca e mai mare decat intervalul de trimitere, valorile sosesc la timp dar sunt deja vechi">
+                    esantionare @Plc.SamplingIntervalMs.ToString("0") ms
+                </span>
+            }
+            @if (Plc.PublishGaps.Count > 0)
+            {
+                var gaps = Plc.PublishGaps;
+                <span class="dim">
+                    sosesc din @gaps.Min.ToString("0") in @gaps.Max.ToString("0") ms,
+                    in medie @gaps.Average.ToString("0")
+                </span>
+            }
+            else
+            {
+                <span class="dim">valorile vin cand se schimba; bucla nu mai cere nimic</span>
+            }
+        }
+        else
+        {
+            <strong>Citire ciclica, la @Plc.UpdatePeriodMs ms</strong>
+            <span class="dim">@(Plc.SubscriptionError ?? "subscriptia nu s-a facut inca")</span>
+        }
+    </div>
+}
+
+<div class="panel">
+    <header>
+        <h2>Legari</h2>
+        <span class="spacer"></span>
+        <div class="check" style="margin:0">
+            <input type="checkbox" id="onlyUnbound" checked="@_onlyUnbound"
+                   @onchange="e => _onlyUnbound = (bool)(e.Value ?? false)"/>
+            <label for="onlyUnbound">doar nelegate</label>
+        </div>
+        <input type="text" placeholder="filtreaza..." value="@_filter"
+               @oninput="e => _filter = e.Value?.ToString() ?? string.Empty"
+               style="background:var(--bg-inset);border:1px solid var(--line);border-radius:7px;
+                      color:var(--text);padding:6px 10px;user-select:text"/>
+    </header>
+    <div class="body table-scroll" style="max-height:60dvh;overflow:auto">
+        @if (Plc.Bindings.Count == 0)
+        {
+            <p class="faint">Nu exista inca o conexiune care sa fi rezolvat simbolurile.</p>
+        }
+        else
+        {
+            <table class="data">
+                <thead>
+                <tr>
+                    <th>Nume logic</th>
+                    <th>Stare</th>
+                    <th>NodeId / cale gasita</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var binding in Filtered.Take(400))
+                {
+                    <tr>
+                        <td class="mono">@binding.LogicalName</td>
+                        <td>
+                            @if (binding.Bound)
+                            {
+                                <span class="pill ok" style="padding:2px 8px">
+                                    <span class="led"></span><span class="value">legat</span>
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="pill bad" style="padding:2px 8px">
+                                    <span class="led"></span><span class="value">lipsa</span>
+                                </span>
+                            }
+                        </td>
+                        <td class="mono faint">@(binding.NodeId ?? binding.Note)</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+
+            @if (Filtered.Count() > 400)
+            {
+                <p class="faint" style="margin-top:10px">
+                    Se afiseaza primele 400 din @Filtered.Count(). Foloseste filtrul.
+                </p>
+            }
+        }
+    </div>
+</div>
+
+@if (Plc.BrowsedVariables.Count > 0)
+{
+    <div class="panel" style="margin-top:14px">
+        <header>
+            <h2>Spatiul de adrese, asa cum a fost gasit</h2>
+            <span class="faint">util cand un simbol nu se leaga: aici se vede cum il numeste serverul</span>
+        </header>
+        <div class="body table-scroll" style="max-height:40dvh;overflow:auto">
+            <table class="data">
+                <thead>
+                <tr>
+                    <th>Cale</th>
+                    <th>NodeId</th>
+                    <th class="num">ValueRank</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var variable in BrowsedFiltered.Take(400))
+                {
+                    <tr>
+                        <td class="mono">@variable.Path</td>
+                        <td class="mono faint">@variable.NodeId</td>
+                        <td class="num faint">@variable.ValueRank</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@code {
+    private string _filter = string.Empty;
+    private bool _onlyUnbound;
+
+    private int Bound => Plc.Bindings.Count(b => b.Bound);
+    private int Unbound => Plc.Bindings.Count - Bound;
+
+    private IEnumerable<SymbolBinding> Filtered => Plc.Bindings
+        .Where(b => !_onlyUnbound || !b.Bound)
+        .Where(b => _filter.Length == 0 ||
+                    b.LogicalName.Contains(_filter, StringComparison.OrdinalIgnoreCase));
+
+    private IEnumerable<BrowsedVariable> BrowsedFiltered => Plc.BrowsedVariables
+        .Where(v => _filter.Length == 0 || v.Path.Contains(_filter, StringComparison.OrdinalIgnoreCase))
+        .OrderBy(v => v.Path, StringComparer.OrdinalIgnoreCase);
+}

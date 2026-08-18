@@ -1,0 +1,54 @@
+@* One pool entry: identity on the left, content on the right, where it is underneath. *@
+
+<div class="pallet-card @(Pallet.IsValid ? "" : "free") @(Highlight ? "highlight" : "")">
+    <div class="pallet-head">
+        <span class="pallet-id">Paleta @Pallet.VirtualId</span>
+        @if (Pallet.IsValid)
+        {
+            <span class="pallet-rfid" title="id citit de RFID; lipseste daca n-a fost scanata">
+                @(Pallet.RealId > 0 ? $"RFID {Rfid}" : "fara RFID")
+            </span>
+        }
+        else
+        {
+            <span class="pallet-rfid">loc liber</span>
+        }
+    </div>
+
+    <div class="pallet-body">
+        <SlotGrid Slots="Pallet.Slots" Size="md"/>
+        @* The same order as in the drawing: the back row on top, the front row below. Read in
+           ascending order, the numbers would have put the lower pieces above the upper ones. *@
+        <div class="pallet-slots">
+            @foreach (var slot in SlotGrid.DrawOrder)
+            {
+                var type = Pallet.Slots[slot];
+                <div class="pallet-slot">
+                    <span class="faint">@slot</span>
+                    <span class="@(type == ObjectType.Missing ? "faint" : "")">@type.Label()</span>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="pallet-foot">
+        <span class="faint">@(Location ?? "Neplasata")</span>
+        @if (Pallet.IsValid)
+        {
+            <span class="spacer"></span>
+            <span class="faint">@Pallet.ObjectCount / @PalletInfo.SlotCount ocupate</span>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PalletInfo Pallet { get; set; } = default!;
+
+    /// <summary>Where the pool entry sits right now, from <c>Rows</c> or the gripper.</summary>
+    [Parameter] public string? Location { get; set; }
+
+    [Parameter] public bool Highlight { get; set; }
+
+    /// <summary>Plain decimal, no thousands separator - it is an identifier, not a quantity.</summary>
+    private string Rfid => Pallet.RealId.ToString(System.Globalization.CultureInfo.InvariantCulture);
+}

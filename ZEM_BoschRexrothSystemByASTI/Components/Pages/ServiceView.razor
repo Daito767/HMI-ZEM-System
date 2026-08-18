@@ -1,0 +1,38 @@
+@page "/service"
+@inherits PlcComponentBase
+@implements IDisposable
+@inject UiState Ui
+
+<PageTitle>Service</PageTitle>
+
+@switch (Ui.SelectedOf("service"))
+{
+    case "Diagnostic":
+        <DiagnosticsPanel/>
+        break;
+    case "Configuratie":
+        <ConfigurationPanel/>
+        break;
+    case "Simboluri":
+        <SymbolsPanel/>
+        break;
+    default:
+        <SettingsPanel/>
+        break;
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Ui.Changed += OnUiChanged;
+    }
+
+    private void OnUiChanged() => InvokeAsync(StateHasChanged);
+
+    public override void Dispose()
+    {
+        Ui.Changed -= OnUiChanged;
+        base.Dispose();
+    }
+}

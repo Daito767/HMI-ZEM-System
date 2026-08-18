@@ -1,0 +1,16 @@
+# Line-ending normalisation: LF is kept in the repository, while the working copy
+# follows the platform convention. Without this, a checkout on another machine
+# marks every file as modified in full.
+* text=auto
+
+# Binary - never touched
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.zip binary
+*.ttf binary
+*.woff  binary
+*.woff2 binary
+*.keystore binary

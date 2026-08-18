@@ -1,0 +1,202 @@
+@inherits PlcComponentBase
+@using System.Globalization
+
+@* Manual command of the two axes. The HMI does not command the axis directly: it raises flags in
+   the HMI program inside the PLC, which does the jog with travel limits, the power-on timing,
+   Pause/Resume and SmartReset. *@
+
+<div class="grid cols-2">
+    <div class="panel">
+        <header>
+            <h2>Miscare</h2>
+            <span class="spacer"></span>
+            <div class="lamps-row compact">
+                <Lamp Name="In afara cursei" State="deplasare relativa" Tone="bad"
+                      On="@(!Hmi.AllowRelativeMovement)"/>
+            </div>
+        </header>
+        <div class="body">
+            @* A single field sent by a single button: the button sits right under its field. *@
+            <div class="actions">
+                <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr))">
+                    <div>
+                        <h3>Jog conveior</h3>
+                        <div class="commands">
+                            <HoldButton Class="cmd-hold" Disabled="@ConveyorJogDisabled"
+                                        OnHold="v => Hold(PlcSymbols.ConveyorJogBackward, v)">INAPOI</HoldButton>
+                            <HoldButton Class="cmd-hold" Disabled="@ConveyorJogDisabled"
+                                        OnHold="v => Hold(PlcSymbols.ConveyorJogForward, v)">INAINTE</HoldButton>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3>Jog brat</h3>
+                        <div class="commands">
+                            <HoldButton Class="cmd-hold" Disabled="@ArmJogDisabled"
+                                        OnHold="v => Hold(PlcSymbols.ArmJogLeft, v)">STANGA</HoldButton>
+                            <HoldButton Class="cmd-hold" Disabled="@ArmJogDisabled"
+                                        OnHold="v => Hold(PlcSymbols.ArmJogRight, v)">DREAPTA</HoldButton>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr));margin-top:14px">
+                    <div>
+                        <h3>Pozitie absoluta</h3>
+                        <div class="field">
+                            <input type="number" step="1" value="@_absolute"
+                                   disabled="@(!Plc.CanCommandManually)"
+                                   @onchange="e => _absolute = ParseNumber(e.Value, _absolute)"/>
+                        </div>
+                        <button class="btn primary" disabled="@(!Plc.CanCommandManually || Hmi.WaitForMoveAbsolute)"
+                                @onclick="MoveAbsolute">
+                            @(Hmi.WaitForMoveAbsolute ? "SE DEPLASEAZA" : "MERGI LA")
+                        </button>
+                    </div>
+
+                    <div>
+                        <h3>Deplasare relativa</h3>
+                        <div class="field">
+                            <input type="number" step="1" value="@_relative"
+                                   disabled="@(!Plc.CanCommandManually)"
+                                   @onchange="e => _relative = ParseNumber(e.Value, _relative)"/>
+                        </div>
+                        <button class="btn primary"
+                                disabled="@(!Plc.CanCommandManually || Hmi.WaitForMoveRelative || !Hmi.AllowRelativeMovement)"
+                                @onclick="MoveRelative">
+                            @(Hmi.WaitForMoveRelative ? "SE DEPLASEAZA" : "DEPLASEAZA")
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <header><h2>Alimentare</h2></header>
+        <div class="body">
+            <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+                <div>
+                    <h3>Conveior</h3>
+                    <div class="lamps-row">
+                        <Lamp Name="Alimentare" State="conveior" On="Conveyor.PowerOn" Tone="warn"/>
+                        <Lamp Name="Eroare" State="conveior" On="Conveyor.HasError" Tone="bad"/>
+                    </div>
+                    <div class="actions">
+                        <div class="commands stacked">
+                            <button class="btn" disabled="@(!Plc.CanCommandManually)"
+                                    @onclick="() => Pulse(PlcSymbols.ConveyorSetPower)">ALIMENTEAZA</button>
+                            <button class="btn" disabled="@(!Plc.CanCommandManually)"
+                                    @onclick="() => Raise(PlcSymbols.ConveyorStop)">STOP</button>
+                            <button class="btn" disabled="@(!Plc.CanCommandManually || Conveyor.InputsDisabled)"
+                                    @onclick="() => Raise(PlcSymbols.ConveyorReset)">RESET</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h3>Brat</h3>
+                    <div class="lamps-row">
+                        <Lamp Name="Alimentare" State="brat" On="Arm.PowerOn" Tone="warn"/>
+                        <Lamp Name="Eroare" State="brat" On="Arm.HasError" Tone="bad"/>
+                    </div>
+                    <div class="actions">
+                        <div class="commands stacked">
+                            <button class="btn" disabled="@(!Plc.CanCommandManually)"
+                                    @onclick="() => Pulse(PlcSymbols.ArmSetPower)">ALIMENTEAZA</button>
+                            <button class="btn" disabled="@(!Plc.CanCommandManually)"
+                                    @onclick="() => Raise(PlcSymbols.ArmStop)">STOP</button>
+                            <button class="btn" disabled="@(!Plc.CanCommandManually || Arm.InputsDisabled)"
+                                    @onclick="() => Raise(PlcSymbols.ArmReset)">RESET</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <header><h2>Altele</h2></header>
+        <div class="body">
+            <table class="data">
+                <tbody>
+                <tr>
+                    <td>Distanta paletei</td>
+                    <td class="num">@Fmt(Hmi.ConveyorDistance, "0.0") mm</td>
+                </tr>
+                <tr>
+                    <td>Pozitia bratului</td>
+                    <td class="num">@Fmt(Arm.Position, "0.0") mm</td>
+                </tr>
+                <tr>
+                    <td>Cursa</td>
+                    <td class="num">@Fmt(Plc.Config.Arm.TravelMin, "0.#") … @Fmt(Plc.Config.Arm.TravelMax, "0.#") mm</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="panel">
+        <header>
+            <h2>Viteze</h2>
+            <span class="faint">din configuratia standului</span>
+        </header>
+        <div class="body">
+            <table class="data">
+                <tbody>
+                <tr><td>Conveior · viteza de jog</td><td class="num">@Fmt(Plc.Config.Conveyor.JogVelocity, "0.#") mm/s</td></tr>
+                <tr><td>Conveior · factor de incetinire</td><td class="num">@Fmt(Plc.Config.Conveyor.SlowDownFactor, "0.###")</td></tr>
+                <tr><td>Brat · viteza de jog</td><td class="num">@Fmt(Plc.Config.Arm.JogVelocity, "0.#") mm/s</td></tr>
+                <tr><td>Brat · viteza de deplasare</td><td class="num">@Fmt(Plc.Config.Arm.MoveVelocity, "0.#") mm/s</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    private double _absolute;
+    private double _relative;
+
+    private AxisState Arm => Plc.Machine.Arm;
+    private AxisState Conveyor => Plc.Machine.Conveyor;
+    private HmiState Hmi => Plc.Machine.Hmi;
+
+    private bool ArmJogDisabled => !Plc.CanCommandManually || Arm.Busy;
+    private bool ConveyorJogDisabled => !Plc.CanCommandManually || Conveyor.Busy;
+
+    private async Task Hold(string symbol, bool value) => await Plc.SetFlagAsync(symbol, value);
+
+    private async Task Pulse(string symbol) => await Plc.PulseFlagAsync(symbol);
+
+    /// <summary>Stop and Reset are the flags the PLC clears itself once it is done with them.</summary>
+    private async Task Raise(string symbol) => await Plc.SetFlagAsync(symbol, true);
+
+    private async Task MoveAbsolute()
+    {
+        if (!await Plc.SetRealAsync(PlcSymbols.ArmMoveAbsolutePosition, _absolute)) return;
+        await Plc.PulseFlagAsync(PlcSymbols.ArmMoveAbsolute);
+    }
+
+    private async Task MoveRelative()
+    {
+        if (!await Plc.SetRealAsync(PlcSymbols.ArmMoveRelativePosition, _relative)) return;
+        await Plc.PulseFlagAsync(PlcSymbols.ArmMoveRelative);
+    }
+
+    private static double ParseNumber(object? value, double fallback) =>
+        double.TryParse(value?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : fallback;
+
+    private static string Fmt(double value, string format) =>
+        value.ToString(format, CultureInfo.InvariantCulture);
+
+    public override void Dispose()
+    {
+        // Leaving the panel must not leave a jog flag up.
+        _ = Plc.ReleaseAllFlagsAsync();
+        base.Dispose();
+    }
+}

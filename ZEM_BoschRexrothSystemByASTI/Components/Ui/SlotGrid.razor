@@ -1,0 +1,69 @@
+@* The four slots of a pallet, in the order they physically sit on it:
+
+       2 | 3   back row  (SecondRowLeft, SecondRowRight)
+      ---+---
+       1 | 0   front row (FirstRowLeft, FirstRowRight)
+
+   This is the one picture that repeats everywhere, so it lives in one component. *@
+
+<div class="slotgrid @SizeClass" title="@Summary">
+    @foreach (var slot in DrawOrder)
+    {
+        var type = TypeOf(slot);
+        <div class="slot @StateOf(type)" style="@FillOf(type)" title="@Describe(slot)">
+            @if (type == ObjectType.Unknown)
+            {
+                <span class="glyph">?</span>
+            }
+            else if (ShowIndex)
+            {
+                <span class="index">@slot</span>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// Top-left, top-right, bottom-left, bottom-right — the back row is drawn first. Public because
+    /// anything that lists the slots as text has to read them in the same order as the picture.
+    /// </summary>
+    public static readonly int[] DrawOrder = { 2, 3, 1, 0 };
+
+    [Parameter, EditorRequired] public ObjectType[] Slots { get; set; } = Array.Empty<ObjectType>();
+
+    /// <summary>Names straight from <c>_objectColorsStr</c>, when they have been read.</summary>
+    [Parameter] public string[]? Names { get; set; }
+
+    /// <summary>"sm" in tables, "md" in cards, "lg" when the pallet is the subject of the panel.</summary>
+    [Parameter] public string Size { get; set; } = "md";
+
+    [Parameter] public bool ShowIndex { get; set; }
+
+    private string SizeClass => $"size-{Size}";
+
+    private ObjectType TypeOf(int slot) =>
+        slot >= 0 && slot < Slots.Length ? Slots[slot] : ObjectType.Missing;
+
+    private static string StateOf(ObjectType type) => type switch
+    {
+        ObjectType.Missing => "empty",
+        ObjectType.Unknown => "unknown",
+        _ => "filled"
+    };
+
+    private static string FillOf(ObjectType type) =>
+        type is ObjectType.Missing or ObjectType.Unknown ? "" : type.FillStyle();
+
+    private string Describe(int slot)
+    {
+        var type = TypeOf(slot);
+        var name = Names is not null && slot < Names.Length && Names[slot].Length > 0
+            ? Names[slot]
+            : type.Label();
+        return $"slot {slot} · {((PalletSlot)slot).Label()} · {name}";
+    }
+
+    private string Summary => string.Join(" · ",
+        DrawOrder.OrderBy(s => s).Select(s => $"{s}:{TypeOf(s).Label()}"));
+}

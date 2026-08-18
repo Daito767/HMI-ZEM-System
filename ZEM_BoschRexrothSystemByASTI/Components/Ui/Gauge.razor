@@ -1,0 +1,101 @@
+@using System.Globalization
+
+@* The quarter-circle dial from the old HMI: pivot bottom left, needle sweeping from straight up
+   (zero) to straight right (full scale). A number tells you the value; the needle tells you where
+   it sits in the range without reading anything. *@
+
+<div class="gauge">
+    <svg viewBox="0 0 160 132" role="img" aria-label="@Name">
+        <path d="@ScaleArc" fill="none" stroke="#2a3342" stroke-width="10" stroke-linecap="round"/>
+        <path d="@ScaleArc" fill="none" stroke="#3d4a5c" stroke-width="2"/>
+
+        @foreach (var tick in Ticks())
+        {
+            <line x1="@F(tick.X1)" y1="@F(tick.Y1)" x2="@F(tick.X2)" y2="@F(tick.Y2)"
+                  stroke="#6d7c8f" stroke-width="2"/>
+        }
+
+        @foreach (var label in Labels())
+        {
+            <g>
+                <text x="@F(label.X)" y="@F(label.Y)" fill="#7d8a9c" font-size="11"
+                      text-anchor="@label.Anchor">@label.Text</text>
+            </g>
+        }
+
+        <line x1="@F(PivotX)" y1="@F(PivotY)" x2="@F(NeedleX)" y2="@F(NeedleY)"
+              stroke="#e6ecf5" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="@F(PivotX)" cy="@F(PivotY)" r="7" fill="#1b212b" stroke="#6d7c8f" stroke-width="2"/>
+    </svg>
+
+    <div class="gauge-name">@Name</div>
+    <div class="gauge-value">@Value.ToString(Format, CultureInfo.InvariantCulture) @Unit</div>
+</div>
+
+@code {
+    private const double PivotX = 34;
+    private const double PivotY = 112;
+    private const double Radius = 86;
+
+    [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
+    [Parameter] public double Value { get; set; }
+    [Parameter] public double Max { get; set; } = 10;
+    [Parameter] public string Unit { get; set; } = "V";
+    [Parameter] public string Format { get; set; } = "0.00";
+
+    /// <summary>Zero points straight up, full scale points straight right.</summary>
+    private double AngleOf(double value)
+    {
+        var fraction = Max <= 0 ? 0 : Math.Clamp(value / Max, 0, 1);
+        return (-90 + 90 * fraction) * Math.PI / 180;
+    }
+
+    private (double X, double Y) PointAt(double value, double radius)
+    {
+        var angle = AngleOf(value);
+        return (PivotX + radius * Math.Cos(angle), PivotY + radius * Math.Sin(angle));
+    }
+
+    private string ScaleArc
+    {
+        get
+        {
+            var start = PointAt(0, Radius);
+            var end = PointAt(Max, Radius);
+            return $"M{F(start.X)},{F(start.Y)} A{F(Radius)},{F(Radius)} 0 0 1 {F(end.X)},{F(end.Y)}";
+        }
+    }
+
+    private (double X1, double Y1, double X2, double Y2) Tick(double value)
+    {
+        var outer = PointAt(value, Radius - 5);
+        var inner = PointAt(value, Radius - 15);
+        return (outer.X, outer.Y, inner.X, inner.Y);
+    }
+
+    private IEnumerable<(double X1, double Y1, double X2, double Y2)> Ticks()
+    {
+        for (var i = 0; i <= 10; i++)
+            yield return Tick(Max * i / 10.0);
+    }
+
+    private IEnumerable<(double X, double Y, string Text, string Anchor)> Labels()
+    {
+        var zero = PointAt(0, Radius - 26);
+        var half = PointAt(Max / 2, Radius - 26);
+        var full = PointAt(Max, Radius - 26);
+
+        yield return (zero.X + 4, zero.Y + 4, Number(0), "start");
+        yield return (half.X - 4, half.Y + 12, Number(Max / 2), "middle");
+        yield return (full.X + 2, full.Y + 14, Number(Max), "end");
+    }
+
+    private (double X, double Y) Needle => PointAt(Value, Radius - 20);
+    private double NeedleX => Needle.X;
+    private double NeedleY => Needle.Y;
+
+    private static string Number(double value) => value.ToString("0.0", CultureInfo.InvariantCulture);
+
+    /// <summary>A Razor expression formats with the current culture, and SVG will not take "1,5".</summary>
+    private static string F(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
+}

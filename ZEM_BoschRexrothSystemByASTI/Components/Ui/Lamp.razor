@@ -1,0 +1,25 @@
+@* A bulb with its caption underneath, the way the old HMI showed every binary signal: the colour
+   carries the state, the label never changes. *@
+
+<div class="lamp-unit" title="@Title">
+    <div class="lamp-bulb @(On ? "on" : "") @Tone"></div>
+    <div class="lamp-name">@Name</div>
+    @if (!string.IsNullOrEmpty(State))
+    {
+        <div class="lamp-state">@State</div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
+
+    /// <summary>The second line. Usually what the lamp means when it is lit.</summary>
+    [Parameter] public string? State { get; set; }
+
+    [Parameter] public bool On { get; set; }
+
+    /// <summary>good, bad, warn or info — what lighting up means here.</summary>
+    [Parameter] public string Tone { get; set; } = "good";
+
+    [Parameter] public string? Title { get; set; }
+}

@@ -1,0 +1,22 @@
+@* One number or one short state, big enough to read from the far side of the stand. *@
+
+<div class="tile @ToneClass">
+    <div class="tile-label">@Label</div>
+    <div class="tile-value">@Value</div>
+    @if (!string.IsNullOrEmpty(Hint))
+    {
+        <div class="tile-hint">@Hint</div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Value { get; set; } = string.Empty;
+
+    /// <summary>Usually the PLC symbol the value comes from, so the number is traceable.</summary>
+    [Parameter] public string? Hint { get; set; }
+
+    [Parameter] public string Tone { get; set; } = "";
+
+    private string ToneClass => string.IsNullOrEmpty(Tone) ? "" : $"tone-{Tone}";
+}

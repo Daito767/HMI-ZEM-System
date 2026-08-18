@@ -1,0 +1,61 @@
+@page "/manual"
+@inherits PlcComponentBase
+@implements IDisposable
+@inject UiState Ui
+
+<PageTitle>Control manual</PageTitle>
+
+@* The rule comes from HMI.impl: the command methods are only called while the system is not running
+   and not resetting. The banner shows only when commands are blocked — the ordinary case is visible
+   from the live buttons anyway, and a permanent green banner says nothing. *@
+
+@if (!Plc.CanCommandManually)
+{
+    <div class="banner warn">
+        <span class="pill warn">
+            <span class="led"></span>
+            <span class="value">COMENZI BLOCATE</span>
+        </span>
+        <span class="dim">@Reason</span>
+    </div>
+}
+
+@switch (Ui.SelectedOf("manual"))
+{
+    case "Miscare":
+        <MotionPanel/>
+        break;
+    case "Pneumatic":
+        <PneumaticPanel/>
+        break;
+    case "RFID":
+        <RfidPanel/>
+        break;
+    default:
+        <AnalogPanel/>
+        break;
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Ui.Changed += OnUiChanged;
+    }
+
+    private void OnUiChanged() => InvokeAsync(StateHasChanged);
+
+    /// <summary>Read only while commands are blocked — which is why it has no "allowed" branch.</summary>
+    private string Reason =>
+        Cell.ResetStarted ? "sistemul se reseteaza"
+        : Cell.Run ? "sistemul merge in automat"
+        : "nu exista conexiune cu PLC-ul";
+
+    public override void Dispose()
+    {
+        // Leaving the tab must not leave a flag up.
+        _ = Plc.ReleaseAllFlagsAsync();
+        Ui.Changed -= OnUiChanged;
+        base.Dispose();
+    }
+}

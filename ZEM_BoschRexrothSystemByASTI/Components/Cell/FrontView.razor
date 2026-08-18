@@ -1,0 +1,224 @@
+@* The stand seen from the front. Every pallet sits on the belt rail, at the height the drawings
+   were made for; the only thing telling them apart is the column, that is the sideways offset.
+   There is a single pneumatic head - gripper, claws and vacuum come down together. *@
+
+<div class="stand stand-front" style="--step:@(StepMs)ms">
+    <img class="layer" src="cell/front/metal-rail-back.svg" alt=""/>
+    <img class="layer" src="cell/front/vertical-rails.svg" alt=""/>
+    <img class="layer" src="cell/front/arm-rails.svg" alt=""/>
+
+    @* The arm comes from the front of the cell: it passes over the side columns, so they sit behind
+       it whole - including behind the pallet it carries, or a pallet just set down looked as if it
+       were sliding under the one in front of it. *@
+    @foreach (var placed in InColumns)
+    {
+        @StandingWhole(placed)
+    }
+
+    @* The only pallet the arm actually reaches into is the one on the belt, the one about to be
+       picked. It alone is split in two: the back wall here, the front wall after the head, so that
+       it hides the head when it comes down into it. *@
+    @foreach (var placed in OnBelt)
+    {
+        @StandingBack(placed)
+    }
+
+    <img class="layer" src="cell/front/vacuum.svg" alt="" style="@Head"/>
+    <img class="layer" src="cell/front/vacuum-element.svg" alt="" style="@Head"/>
+    @if (VacuumDrawing is { } vacuum)
+    {
+        <img class="layer" src="cell/front/vacuum-@(vacuum).svg" alt=""
+             style="@HeadAt(StandGeometry.VacuumPieceOffsetMm)"/>
+    }
+    <img class="layer" src="cell/front/gripper.svg" alt="" style="@Head"/>
+
+    @* The pallet in the gripper keeps the layering of the old visualisation: the back row stays
+       behind the claws, the front row passes over them, so the claws are seen gripping it. *@
+    @if (InGripper is { } carried)
+    {
+        <div class="pallet" @key="CarriedBackKey" style="@Carried">
+            @BackRow(carried.Pallet)
+        </div>
+    }
+
+    <img class="layer" src="cell/front/gripper-claw-left.svg" alt=""
+         style="@HeadAt(Machine.Io.GripperClosed ? StandGeometry.ClawCloseMm : 0)"/>
+    <img class="layer" src="cell/front/gripper-claw-right.svg" alt=""
+         style="@HeadAt(Machine.Io.GripperClosed ? -StandGeometry.ClawCloseMm : 0)"/>
+
+    @if (InGripper is { } held)
+    {
+        <div class="pallet" @key="CarriedForeKey" style="@Carried">
+            @ForeRow(held.Pallet)
+        </div>
+    }
+
+    @foreach (var placed in OnBelt)
+    {
+        @StandingFore(placed)
+    }
+
+    <img class="layer" src="cell/front/vertical-pistons.svg" alt=""
+         style="@StandGeometry.MoveFront(ArmX, 0)"/>
+
+    <img class="layer" src="cell/front/horizontal-rails.svg" alt=""/>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public CellSnapshot Cell { get; set; } = default!;
+    [Parameter, EditorRequired] public MachineSnapshot Machine { get; set; } = default!;
+
+    /// <summary>How long one step of movement takes: the period the values arrive at, not a duration picked by hand.</summary>
+    [Parameter] public int StepMs { get; set; } = 250;
+
+    /// <summary>The stand's numbers, where the spacing between pallets comes from.</summary>
+    [Parameter] public PlcConfigSnapshot? Config { get; set; }
+
+    private double ArmX => Machine.Arm.Position;
+
+    /// <summary>One stroke for the whole head: extended lowers it, retracted brings it back up.</summary>
+    private double HeadY =>
+        Machine.Io.ArmExtended && !Machine.Io.ArmRetracted ? StandGeometry.HeadDropMm : 0;
+
+    private string Head => HeadAt(0);
+
+    private string HeadAt(double sidewaysMm) => StandGeometry.MoveFront(ArmX + sidewaysMm, HeadY);
+
+    private string Carried =>
+        StandGeometry.MoveFront(ArmX - StandGeometry.ArmBaselineMm,
+                                StandGeometry.CarriedLiftMm(HeadY));
+
+    private string? VacuumDrawing => StandGeometry.PieceName(Cell.InVacuum);
+
+    private IEnumerable<StandGeometry.Placement> All =>
+        StandGeometry.Placements(Cell, Machine, Config);
+
+    /// <summary>
+    /// Everything standing on the stand, back of a column first: pallets queued behind one another
+    /// land on the same spot seen from the front, so the one at the front has to be drawn last.
+    /// </summary>
+    private IEnumerable<StandGeometry.Placement> OnTheStand => All.Where(p => !p.InGripper);
+
+    /// <summary>The side columns - the arm passes over them, so they are drawn behind it.</summary>
+    private IEnumerable<StandGeometry.Placement> InColumns => OnTheStand.Where(p => !p.OnBelt);
+
+    /// <summary>The belt - the arm reaches into it, so its front wall is drawn over the arm.</summary>
+    private IEnumerable<StandGeometry.Placement> OnBelt => OnTheStand.Where(p => p.OnBelt);
+
+    private StandGeometry.Placement? InGripper
+    {
+        get
+        {
+            foreach (var placed in All)
+            {
+                if (placed.InGripper) return placed;
+            }
+
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Keys have to be unique among siblings, and a pallet in the gripper is drawn twice - its back
+    /// row behind the claws, its front row over them - so the two halves cannot share the plain id.
+    /// </summary>
+    private static string Key(string part, int id) => $"{part}-{id}";
+
+    private string CarriedBackKey => Key("gripper-back", Cell.InGripper);
+    private string CarriedForeKey => Key("gripper-fore", Cell.InGripper);
+
+    /// <summary>A pallet nothing goes into, drawn in one piece.</summary>
+    private RenderFragment StandingWhole(StandGeometry.Placement placed) => builder =>
+    {
+        builder.OpenElement(0, "div");
+        builder.SetKey(Key("row", placed.Id));
+        builder.AddAttribute(1, "class", "pallet");
+        builder.AddAttribute(2, "style", StandGeometry.MoveFront(placed.Sideways, 0));
+        builder.AddContent(3, BackRow(placed.Pallet));
+        builder.AddContent(4, ForeRow(placed.Pallet));
+        builder.CloseElement();
+    };
+
+    private RenderFragment StandingBack(StandGeometry.Placement placed) =>
+        Half(placed, "back", BackRow(placed.Pallet));
+
+    private RenderFragment StandingFore(StandGeometry.Placement placed) =>
+        Half(placed, "fore", ForeRow(placed.Pallet));
+
+    /// <summary>Both halves take the same shade, or the seam between them would show.</summary>
+    private static string Shade(StandGeometry.Placement placed) =>
+        StandGeometry.ShadeWithDepth(placed.Forward);
+
+    /// <summary>
+    /// One half of a pallet standing on the stand. The two halves are siblings in the same stack
+    /// with the head between them, so they need keys of their own - the same rule as the pallet in
+    /// the gripper.
+    /// </summary>
+    private RenderFragment Half(StandGeometry.Placement placed, string part, RenderFragment content) =>
+        builder =>
+        {
+            builder.OpenElement(0, "div");
+            builder.SetKey(Key($"row-{part}", placed.Id));
+            builder.AddAttribute(1, "class", "pallet");
+            builder.AddAttribute(2, "style", StandGeometry.MoveFront(placed.Sideways, 0) + Shade(placed));
+            builder.AddContent(3, content);
+            builder.CloseElement();
+        };
+
+    /// <summary>
+    /// The back row of slots, drawn where the files put it and covered by the pallet body in front
+    /// of it - only the outer edges of those two objects show, which is what the eye sees anyway.
+    /// </summary>
+    private RenderFragment BackRow(PalletInfo pallet) => builder =>
+    {
+        var sequence = 0;
+
+        foreach (var side in new[] { "left", "right" })
+        {
+            var index = side == "left" ? 2 : 3;
+            if (StandGeometry.PieceName(pallet.Slots[index]) is not { } name) continue;
+
+            builder.OpenElement(sequence++, "img");
+            builder.AddAttribute(sequence++, "class", "layer");
+            builder.AddAttribute(sequence++, "src", $"cell/front/piece-{side}-{name}.svg");
+            builder.AddAttribute(sequence++, "alt", "");
+            builder.CloseElement();
+        }
+
+        foreach (var part in new[] { "pallet-back", "pallet-back-shadow" })
+        {
+            builder.OpenElement(sequence++, "img");
+            builder.AddAttribute(sequence++, "class", "layer");
+            builder.AddAttribute(sequence++, "src", $"cell/front/{part}.svg");
+            builder.AddAttribute(sequence++, "alt", "");
+            builder.CloseElement();
+        }
+    };
+
+    private RenderFragment ForeRow(PalletInfo pallet) => builder =>
+    {
+        var sequence = 0;
+
+        foreach (var side in new[] { "left", "right" })
+        {
+            var index = side == "left" ? 1 : 0;
+            if (StandGeometry.PieceName(pallet.Slots[index]) is not { } name) continue;
+
+            builder.OpenElement(sequence++, "img");
+            builder.AddAttribute(sequence++, "class", "layer");
+            builder.AddAttribute(sequence++, "src", $"cell/front/piece-{side}-{name}.svg");
+            builder.AddAttribute(sequence++, "alt", "");
+            builder.CloseElement();
+        }
+
+        foreach (var part in new[] { "pallet-fore", "pallet-fore-shadow" })
+        {
+            builder.OpenElement(sequence++, "img");
+            builder.AddAttribute(sequence++, "class", "layer");
+            builder.AddAttribute(sequence++, "src", $"cell/front/{part}.svg");
+            builder.AddAttribute(sequence++, "alt", "");
+            builder.CloseElement();
+        }
+    };
+
+}

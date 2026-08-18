@@ -1,0 +1,48 @@
+@implements IAsyncDisposable
+
+@* A button that holds a level flag up only while it is pressed.
+
+   The PLC has no watchdog on the OPC UA session: a jog flag left TRUE means the axis keeps moving
+   until it reaches its travel limit. So the flag goes down on release, on the pointer leaving the
+   button, on a cancelled touch - and once more when the component goes away. *@
+
+<button class="cmd-hold @Class @(_held ? "held" : "")"
+        disabled="@Disabled"
+        @onpointerdown="Press"
+        @onpointerup="Release"
+        @onpointerleave="Release"
+        @onpointercancel="Release"
+        @oncontextmenu:preventDefault="true">
+    @ChildContent
+</button>
+
+@code {
+    private bool _held;
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string Class { get; set; } = string.Empty;
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Called with TRUE on press and FALSE on release.</summary>
+    [Parameter] public EventCallback<bool> OnHold { get; set; }
+
+    private async Task Press()
+    {
+        if (Disabled || _held) return;
+        _held = true;
+        await OnHold.InvokeAsync(true);
+    }
+
+    private async Task Release()
+    {
+        if (!_held) return;
+        _held = false;
+        await OnHold.InvokeAsync(false);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        // Navigating away while holding the button must not leave the flag up.
+        if (_held) await OnHold.InvokeAsync(false);
+    }
+}

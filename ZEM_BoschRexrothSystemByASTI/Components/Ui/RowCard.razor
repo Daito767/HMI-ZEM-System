@@ -1,0 +1,49 @@
+@* One column, as the operator sees it: how full it is and what sits in it. Ids, RFIDs and queue
+   positions are on the pallet page - repeating them here would only mean two places to read the
+   same thing from. The pallet in front is drawn at the bottom. *@
+
+<div class="row-card">
+    <header>
+        <span class="row-name">@Region.Label().ToUpperInvariant()</span>
+        <span class="spacer"></span>
+        @if (Region != Region.Center && Row.IsAtFront)
+        {
+            <span class="chip blue" title="paleta din fata e afara, tinuta de pullere">la pullere</span>
+        }
+    </header>
+
+    <div class="capacity">
+        <div class="capacity-bar">
+            <div class="capacity-fill" style="width:@(Percent)%"></div>
+        </div>
+        <span class="capacity-text">@Row.Count / @Row.Capacity</span>
+    </div>
+
+    <div class="queue">
+        @for (var i = 0; i < Row.Capacity && i < RowState.MaxCapacity; i++)
+        {
+            var index = i;
+            var used = index < Row.Count;
+            var pallet = used ? Cell.PalletById(Row.PalletIds[index]) : null;
+            var pulled = index == 0 && Row.IsAtFront && Region != Region.Center;
+
+            <div class="queue-slot @(used ? "used" : "free") @(pulled ? "pulled" : "")">
+                @if (pallet is not null)
+                {
+                    <SlotGrid Slots="pallet.Slots" Size="sm"/>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public CellSnapshot Cell { get; set; } = default!;
+    [Parameter, EditorRequired] public Region Region { get; set; }
+
+    private RowState Row => Cell.Rows[Region];
+
+    private int Percent => Row.Capacity <= 0
+        ? 0
+        : Math.Clamp(Row.Count * 100 / Row.Capacity, 0, 100);
+}

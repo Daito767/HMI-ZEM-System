@@ -1,0 +1,96 @@
+@implements IDisposable
+@inject PlcService Plc
+@inject UiState Ui
+@inject NavigationManager Nav
+
+@* The single place navigation comes from. Every tab shows its sections, not just the open one: in
+   the column they are all unfolded, so that one glance tells what each tab holds and so that a
+   section of another tab can be jumped to directly. In the band, where only one row fits, only
+   the open tab's sections show - CSS decides that, from the `current` class.
+
+   The section blocks are emitted after the loop and placed with `order`; rendered inline, after
+   their own tab, they would break the band in the middle. *@
+
+@foreach (var (entry, index) in UiState.Tabs.Select((item, i) => (item, i)))
+{
+    <NavLink class="nav-item" href="@entry.Href" style="@Order(index * 2)"
+             Match="@(entry.Href.Length == 0 ? NavLinkMatch.All : NavLinkMatch.Prefix)">
+        <span class="dot"></span><span class="label">@entry.Label</span>
+        @if (entry.Href == "service" && Plc.Diag.Active)
+        {
+            <span class="nav-badge">!</span>
+        }
+    </NavLink>
+}
+
+@foreach (var (entry, index) in UiState.Tabs.Select((item, i) => (item, i)))
+{
+    var tab = entry.Href;
+    var sections = UiState.SectionsOf(tab);
+    if (sections.Count == 0) continue;
+
+    var isCurrent = tab == CurrentTab;
+
+    <div class="nav-children @(isCurrent ? "current" : "")" style="@Order(index * 2 + 1)">
+        @foreach (var section in sections)
+        {
+            var name = section;
+            @* A section is marked active only inside the open tab: four rows lit at once would no
+               longer say where you are. *@
+            <button class="nav-item nav-child @(isCurrent && name == Ui.SelectedOf(tab) ? "active" : "")"
+                    @onclick="() => Go(tab, name)">
+                <span class="tick"></span><span class="label">@name</span>
+            </button>
+        }
+    </div>
+}
+
+@code {
+    private bool _lastActive;
+
+    protected override void OnInitialized()
+    {
+        Plc.Updated += OnPlcChanged;
+        Ui.Changed += OnUiChanged;
+        Nav.LocationChanged += OnLocationChanged;
+    }
+
+    /// <summary>
+    /// The position is given through a variable rather than through `order` directly, so that the
+    /// portrait media query can rewrite it - there the open block falls last, on a row of its own.
+    /// </summary>
+    private static string Order(int value) => $"--order:{value}";
+
+    private string CurrentTab => UiState.TabOf(Nav.ToBaseRelativePath(Nav.Uri));
+
+    /// <summary>
+    /// A section of another tab is a navigation command as well: it is selected first, then the page
+    /// is jumped to, and the page finds it already selected.
+    /// </summary>
+    private void Go(string tab, string name)
+    {
+        Ui.Select(tab, name);
+        if (tab != CurrentTab) Nav.NavigateTo(tab);
+    }
+
+    // The only thing in the menu that moves on its own is the alarm badge; redrawing it four times
+    // a second would be four wasted renders a second.
+    private void OnPlcChanged()
+    {
+        if (Plc.Diag.Active == _lastActive) return;
+        _lastActive = Plc.Diag.Active;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnUiChanged() => InvokeAsync(StateHasChanged);
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) =>
+        InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Plc.Updated -= OnPlcChanged;
+        Ui.Changed -= OnUiChanged;
+        Nav.LocationChanged -= OnLocationChanged;
+    }
+}

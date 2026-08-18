@@ -1,0 +1,40 @@
+@page "/stare"
+@inherits PlcComponentBase
+@implements IDisposable
+@inject UiState Ui
+
+<PageTitle>Stare sistem</PageTitle>
+
+@* The same data, three ways to read it: the tables, the stand from above and the stand from the
+   front. The drawings have no header - the open section already says which view it is. *@
+
+@switch (Ui.SelectedOf("stare"))
+{
+    case "Animat sus":
+        <TopView Cell="Cell" Machine="Machine" Config="Config" StepMs="Plc.UpdatePeriodMs"/>
+        break;
+
+    case "Animat fata":
+        <FrontView Cell="Cell" Machine="Machine" Config="Config" StepMs="Plc.UpdatePeriodMs"/>
+        break;
+
+    default:
+        <CellDataView/>
+        break;
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Ui.Changed += OnUiChanged;
+    }
+
+    private void OnUiChanged() => InvokeAsync(StateHasChanged);
+
+    public override void Dispose()
+    {
+        Ui.Changed -= OnUiChanged;
+        base.Dispose();
+    }
+}

@@ -1,0 +1,35 @@
+@* A BOOL from the PLC, shown as the value the PLC actually has plus a lamp. *@
+
+<span class="led-value @StateClass" title="@Title">
+    <span class="led-dot"></span>
+    <span class="led-text">@(Value ? OnText : OffText)</span>
+</span>
+
+@code {
+    [Parameter] public bool Value { get; set; }
+
+    /// <summary>What TRUE means here: neutral, good or a problem.</summary>
+    [Parameter] public LedTone Tone { get; set; } = LedTone.Neutral;
+
+    [Parameter] public string OnText { get; set; } = "TRUE";
+    [Parameter] public string OffText { get; set; } = "FALSE";
+    [Parameter] public string? Title { get; set; }
+
+    public enum LedTone
+    {
+        Neutral,
+        Good,
+        Warn,
+        Bad
+    }
+
+    private string StateClass => !Value
+        ? "off"
+        : Tone switch
+        {
+            LedTone.Good => "on good",
+            LedTone.Warn => "on warn",
+            LedTone.Bad => "on bad",
+            _ => "on"
+        };
+}

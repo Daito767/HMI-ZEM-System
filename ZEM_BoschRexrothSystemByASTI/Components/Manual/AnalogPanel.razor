@@ -1,0 +1,84 @@
+@inherits PlcComponentBase
+@using System.Globalization
+
+@* Writing the two analog outputs. The value goes into HMI.ValueAO, and WriteAO is a pulse: left
+   raised, it rewrites the output every cycle. The PLC does the conversion into the raw word. *@
+
+<div class="grid cols-2">
+    @for (var i = 0; i < 2; i++)
+    {
+        var index = i;
+        <div class="panel">
+            <header><h2>Iesirea @(index + 1)</h2></header>
+            <div class="body">
+                <div class="actions">
+                    <div class="field">
+                        <label for="@($"ao{index}")">Valoare de scris</label>
+                        <div style="display:flex;gap:8px;align-items:center">
+                            <input type="number" step="10" id="@($"ao{index}")" value="@_setpoint[index]"
+                                   disabled="@(!Plc.CanCommandManually)"
+                                   style="flex:1 1 auto;min-width:0;text-align:right"
+                                   @onchange="e => _setpoint[index] = ParseNumber(e.Value, _setpoint[index])"/>
+                            <span class="faint">mV</span>
+                        </div>
+                    </div>
+
+                    <div class="commands">
+                        <button class="btn primary" disabled="@(!Plc.CanCommandManually)"
+                                @onclick="() => Write(index)">SCRIE</button>
+                    </div>
+                </div>
+
+                <table class="data">
+                    <tbody>
+                    <tr><td>Valoarea din PLC</td><td class="num">@Fmt(Hmi.AnalogOutValue[index]) mV</td></tr>
+                    <tr><td>Cuvant brut pe iesire</td><td class="num">@Io.AnalogOut[index]</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@if (_message is { Length: > 0 })
+{
+    <p class="faint" style="margin-top:12px;font-size:12px">@_message</p>
+}
+
+@code {
+    private readonly double[] _setpoint = new double[2];
+    private bool _loaded;
+    private string? _message;
+
+    private IoState Io => Plc.Machine.Io;
+    private HmiState Hmi => Plc.Machine.Hmi;
+
+    protected override void OnParametersSet()
+    {
+        // Start from what the PLC already holds, so pressing write without editing changes nothing.
+        if (_loaded) return;
+        _loaded = true;
+        for (var i = 0; i < _setpoint.Length; i++)
+            _setpoint[i] = Hmi.AnalogOutValue[i];
+    }
+
+    private async Task Write(int index)
+    {
+        if (!await Plc.SetRealAsync(PlcSymbols.ValueAnalogOut(index + 1), _setpoint[index]))
+        {
+            _message = "Valoarea nu a putut fi trimisa.";
+            return;
+        }
+
+        _message = await Plc.PulseFlagAsync(PlcSymbols.WriteAnalogOut(index + 1))
+            ? null
+            : "Valoarea a ajuns, dar comanda de scriere nu.";
+    }
+
+    private static double ParseNumber(object? value, double fallback) =>
+        double.TryParse(value?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : fallback;
+
+    private static string Fmt(double value) => value.ToString("0.#", CultureInfo.InvariantCulture);
+}

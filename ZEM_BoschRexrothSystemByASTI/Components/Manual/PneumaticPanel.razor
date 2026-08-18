@@ -1,0 +1,127 @@
+@inherits PlcComponentBase
+
+@* The pneumatics mimic, after the pattern of the old HMI: the sensor first, then its command. The
+   only page where the command band sits at the foot of the panel and not at its head — here the
+   lamp is not the result of the command, but the state the operator reads before pressing.
+
+   The buttons write straight to the outputs, over any sequence logic, so they work only while the
+   system is stopped and only while they are held down. *@
+
+<div class="grid cols-2">
+    <div class="panel">
+        <header><h2>Brat</h2></header>
+        <div class="body">
+            <div class="lamps-row">
+                <Lamp Name="Retras" On="Io.ArmRetracted" Tone="good"/>
+                <Lamp Name="Extins" On="Io.ArmExtended" Tone="warn"/>
+                <Lamp Name="Comanda" State="extindere" On="Io.ArmExtendCmd" Tone="info"/>
+                <Lamp Name="Comanda" State="retragere" On="Io.ArmRetractCmd" Tone="info"/>
+            </div>
+            <div class="actions">
+                <div class="commands">
+                    <HoldButton Class="cmd-hold" Disabled="@Locked"
+                                OnHold="v => Hold(PlcSymbols.ArmRetractCmd, v)">RETRAGE</HoldButton>
+                    <HoldButton Class="cmd-hold" Disabled="@Locked"
+                                OnHold="v => Hold(PlcSymbols.ArmExtendCmd, v)">EXTINDE</HoldButton>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <header><h2>Gripper</h2></header>
+        <div class="body">
+            <div class="lamps-row">
+                <Lamp Name="Inchis" On="Io.GripperClosed" Tone="warn"/>
+                <Lamp Name="Vacuum" State="detectat" On="Io.VacuumDetected" Tone="good"/>
+                <Lamp Name="Comanda" State="gripper" On="Io.GripperCloseCmd" Tone="info"/>
+                <Lamp Name="Comanda" State="vacuum" On="Io.VacuumCmd" Tone="info"/>
+            </div>
+            <div class="actions">
+                <div class="commands">
+                    <HoldButton Class="cmd-hold" Disabled="@Locked"
+                                OnHold="v => Hold(PlcSymbols.GripperCloseCmd, v)">INCHIDE</HoldButton>
+                    <HoldButton Class="cmd-hold" Disabled="@Locked"
+                                OnHold="v => Hold(PlcSymbols.VacuumCmd, v)">VACUUM</HoldButton>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <header><h2>Magazie</h2></header>
+        <div class="body">
+            <div class="lamps-row">
+                <Lamp Name="Sus spate" State="retrasa" On="Io.GateTopBackwardRetracted" Tone="good"/>
+                <Lamp Name="Sus fata" State="retrasa" On="Io.GateTopForwardRetracted" Tone="good"/>
+                <Lamp Name="Jos stanga" State="retrasa" On="Io.GateBottomLeftRetracted" Tone="good"/>
+                <Lamp Name="Jos dreapta" State="retrasa" On="Io.GateBottomRightRetracted" Tone="good"/>
+            </div>
+            <div class="actions">
+                <div class="commands">
+                    <HoldButton Class="cmd-hold" Disabled="@Locked"
+                                OnHold="v => Hold(PlcSymbols.GatesTopRetractCmd, v)">RETRAGE SUS</HoldButton>
+                    <HoldButton Class="cmd-hold" Disabled="@Locked"
+                                OnHold="v => Hold(PlcSymbols.GatesBottomRetractCmd, v)">RETRAGE JOS</HoldButton>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <header><h2>Pullere</h2></header>
+        <div class="body">
+            <div class="lamps-row">
+                <Lamp Name="Stanga" State="retras" On="Io.PullerLeftRetracted" Tone="good"/>
+                <Lamp Name="Dreapta" State="retras" On="Io.PullerRightRetracted" Tone="good"/>
+                <Lamp Name="Stanga" State="extins" On="Io.PullerLeftExtended" Tone="warn"/>
+                <Lamp Name="Dreapta" State="extins" On="Io.PullerRightExtended" Tone="warn"/>
+            </div>
+            <div class="actions">
+                <div class="commands">
+                    <HoldButton Class="cmd-hold" Disabled="@Locked"
+                                OnHold="v => Hold(PlcSymbols.PullerRetractCmd, v)">RETRAGE</HoldButton>
+                    <HoldButton Class="cmd-hold" Disabled="@Locked"
+                                OnHold="v => Hold(PlcSymbols.PullerExtendCmd, v)">SCOATE</HoldButton>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <header><h2>Senzori de prezenta</h2></header>
+        <div class="body">
+            <div class="lamps-row">
+                <Lamp Name="Spate" State="departe" On="Io.ExistBackwardFar" Tone="good"/>
+                <Lamp Name="Spate" State="aproape" On="Io.ExistBackwardNear" Tone="good"/>
+                <Lamp Name="Fata" State="departe" On="Io.ExistForwardFar" Tone="good"/>
+                <Lamp Name="Fata" State="aproape" On="Io.ExistForwardNear" Tone="good"/>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <header><h2>Altele</h2></header>
+        <div class="body">
+            <div class="lamps-row">
+                <Lamp Name="Aer comprimat" State="lipsa" On="@(!Io.AirPressureOk)" Tone="bad"/>
+                <Lamp Name="Magazie" State="goala" On="@(!Io.StorageNotEmpty)" Tone="warn"/>
+                <Lamp Name="Buton start" State="pe stand" On="Io.ButtonStart" Tone="info"/>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private IoState Io => Plc.Machine.Io;
+
+    private bool Locked => !Plc.CanCommandManually;
+
+    private async Task Hold(string symbol, bool value) => await Plc.SetFlagAsync(symbol, value);
+
+    public override void Dispose()
+    {
+        _ = Plc.ReleaseAllFlagsAsync();
+        base.Dispose();
+    }
+}

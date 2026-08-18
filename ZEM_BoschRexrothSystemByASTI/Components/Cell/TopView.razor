@@ -1,0 +1,110 @@
+@* The stand seen from above. The layers are the old drawings, stacked in the order they had there:
+   rail, pullers, pallets, storage gates, storage, arm rail, arm. Every layer covers the whole
+   canvas and only ever moves as a whole. *@
+
+<div class="stand stand-top" style="--step:@(StepMs)ms">
+    <img class="layer" src="cell/top/base-rails.svg" alt=""/>
+
+    <img class="layer" src="cell/top/puller-left.svg" alt=""
+         style="@StandGeometry.MoveTop(0, PullerY(Machine.Io.PullerLeftExtended, Machine.Io.PullerLeftRetracted))"/>
+    <img class="layer" src="cell/top/puller-right.svg" alt=""
+         style="@StandGeometry.MoveTop(0, PullerY(Machine.Io.PullerRightExtended, Machine.Io.PullerRightRetracted))"/>
+    <img class="layer" src="cell/top/puller-left-piston.svg" alt=""/>
+    <img class="layer" src="cell/top/puller-right-piston.svg" alt=""/>
+
+    @* @key is the VirtualId, so the layer stays the same element when a pallet moves from one
+       column to another - otherwise the browser rebuilds it and the transition jumps. *@
+    @foreach (var placed in StandGeometry.Placements(Cell, Machine, Config))
+    {
+        <div class="pallet" @key="placed.Id"
+             style="@StandGeometry.MoveTop(placed.Sideways, placed.Forward)">
+            <img class="layer" src="cell/top/pallet.svg" alt=""/>
+            @foreach (var (slot, name) in SlotDrawings(placed.Pallet))
+            {
+                <img class="layer" src="cell/top/piece-@(slot)-@(name).svg" alt=""/>
+            }
+        </div>
+    }
+
+    @* The four barriers frame one pallet place in the storage. Each is pulled perpendicular to its
+       own length, so **the bars drawn horizontally are the ones that move along the system's
+       vertical axis** - those are the Top gates. The ones drawn vertically, at the sides, move
+       horizontally and are the Bottom gates. The file names ("upper" / "lower") come from the old
+       visualisation and say where they sit in the picture, not what commands them. *@
+    <img class="layer" src="cell/top/gate-upper-up.svg" alt=""
+         style="@StandGeometry.MoveTop(0, Machine.Io.GateTopForwardRetracted ? -StandGeometry.GateTravelMm : 0)"/>
+    <img class="layer" src="cell/top/gate-upper-down.svg" alt=""
+         style="@StandGeometry.MoveTop(0, Machine.Io.GateTopBackwardRetracted ? StandGeometry.GateTravelMm : 0)"/>
+    <img class="layer" src="cell/top/gate-lower-left.svg" alt=""
+         style="@StandGeometry.MoveTop(Machine.Io.GateBottomLeftRetracted ? -StandGeometry.GateTravelMm : 0, 0)"/>
+    <img class="layer" src="cell/top/gate-lower-right.svg" alt=""
+         style="@StandGeometry.MoveTop(Machine.Io.GateBottomRightRetracted ? StandGeometry.GateTravelMm : 0, 0)"/>
+
+    <img class="layer" src="cell/top/storage-rails.svg" alt=""/>
+
+    @* The piece on the vacuum hangs under the arm, so it is drawn before it. The arm being
+       see-through, it shows through it, the same as the pallets do. *@
+    @if (VacuumDrawing is { } vacuum)
+    {
+        <img class="layer" src="cell/top/vacuum-@(vacuum).svg" alt=""
+             style="@StandGeometry.MoveTop(ArmX + StandGeometry.VacuumPieceOffsetMm, 0)"/>
+    }
+
+    @* Seen from above, the arm really does pass over the pallet. It stays on top, as it does in
+       reality, but see-through as in the old visualisation - otherwise it covers exactly what the
+       operator wants to look at. *@
+    <img class="layer see-through" src="cell/top/arm-rails.svg" alt=""/>
+    <img class="layer see-through" src="cell/top/arm.svg" alt=""
+         style="@StandGeometry.MoveTop(ArmX, 0)"/>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public CellSnapshot Cell { get; set; } = default!;
+    [Parameter, EditorRequired] public MachineSnapshot Machine { get; set; } = default!;
+
+    /// <summary>How long one step of movement takes: the period the values arrive at, not a duration picked by hand.</summary>
+    [Parameter] public int StepMs { get; set; } = 250;
+
+    /// <summary>The stand's numbers, where the spacing between pallets comes from.</summary>
+    [Parameter] public PlcConfigSnapshot? Config { get; set; }
+
+    private double ArmX => Machine.Arm.Position;
+
+    private string? VacuumDrawing => StandGeometry.PieceName(Cell.InVacuum);
+
+    /// <summary>
+    /// Where a puller is drawn, from its two end sensors. Exactly one of them being made is what
+    /// tells us where it is. Anything else - neither, because it is on its way or stuck, or both,
+    /// which is a sensor fault - means the position is not known, and a position that is not known
+    /// is drawn between the two ends, where no puller ever rests.
+    ///
+    /// It used to fall back to retracted, which hid a jammed puller behind the picture of a
+    /// perfectly normal one: two pullers looking equally home, only one of them actually was.
+    /// </summary>
+    private static double PullerY(bool extended, bool retracted) => (extended, retracted) switch
+    {
+        (true, false) => StandGeometry.PullerReachMm,
+        (false, true) => 0,
+        _ => StandGeometry.PullerReachMm / 2
+    };
+
+    /// <summary>
+    /// The four slots, named the way the drawings are: the arm reaches the cell from the front, so
+    /// the front row of the pallet is the lower one on a picture taken from above.
+    /// </summary>
+    private static readonly (int Index, string Slot)[] SlotNames =
+    {
+        (2, "upper-left"), (3, "upper-right"), (1, "lower-left"), (0, "lower-right")
+    };
+
+    private static IEnumerable<(string Slot, string Name)> SlotDrawings(PalletInfo pallet)
+    {
+        foreach (var (index, slot) in SlotNames)
+        {
+            if (StandGeometry.PieceName(pallet.Slots[index]) is { } name)
+            {
+                yield return (slot, name);
+            }
+        }
+    }
+}

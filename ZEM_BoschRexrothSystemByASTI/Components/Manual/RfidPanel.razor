@@ -1,0 +1,153 @@
+@inherits PlcComponentBase
+
+@* The reader first: with no tag in front of the antenna, the bytes mean nothing. Then the bytes,
+   in two columns as in the old page: the ones read on the left, the ones to write on the right.
+   The command acts on a whole block of bytes, not on one field, so the band sits at the top in
+   both columns - and that keeps the two aligned with each other. *@
+
+<div class="grid">
+    <div class="panel">
+        <header><h2>Cititor</h2></header>
+        <div class="body">
+            <div class="lamps-row" style="margin-bottom:16px">
+                <Lamp Name="Paleta" State="prezenta" On="Io.RfidPresent" Tone="good"/>
+                <Lamp Name="Tag" State="detectat" On="Io.RfidExistTag" Tone="good"/>
+                <Lamp Name="Pregatit" On="Io.RfidReady" Tone="good"/>
+                <Lamp Name="Antena" State="pornita" On="Io.RfidAntennaEnabled" Tone="info"/>
+                <Lamp Name="Eroare" On="Io.RfidError" Tone="bad"/>
+                <Lamp Name="Alarma 1" On="Io.RfidAlarm1" Tone="bad"/>
+                <Lamp Name="Alarma 2" On="Io.RfidAlarm2" Tone="bad"/>
+            </div>
+
+            <div class="faint" style="font-size:11px;font-style:italic;text-transform:uppercase;letter-spacing:.05em">
+                Putere semnal
+            </div>
+            <div class="signal">
+                @for (var i = 0; i < 10; i++)
+                {
+                    var segment = i;
+                    <span class="signal-cell @(segment * 10 < SignalPercent ? "on" : "")"></span>
+                }
+            </div>
+            <div class="faint" style="margin-top:6px;font-size:12px">
+                @Io.RfidSignalLevel · cuvant de stare @Io.RfidStatusByte
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <header><h2>Octeti</h2></header>
+        <div class="body">
+            <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(210px,1fr))">
+                <div>
+                    <div class="actions">
+                        <div class="commands">
+                            <button class="btn primary" disabled="@(!Plc.CanCommandManually)"
+                                    @onclick="Read">CITESTE TOT</button>
+                        </div>
+                    </div>
+                    <table class="data">
+                        <tbody>
+                        @for (var i = 0; i < Io.RfidReadBytes.Length; i++)
+                        {
+                            var index = i;
+                            <tr>
+                                <td class="faint">Octet @index</td>
+                                <td class="num mono">@Io.RfidReadBytes[index]</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div>
+                    <div class="actions">
+                        <div class="commands">
+                            <button class="btn" disabled="@(!Plc.CanCommandManually)"
+                                    @onclick="LoadFromTag">PREIA DE LA TAG</button>
+                            <button class="btn primary" disabled="@(!Plc.CanCommandManually || _writing)"
+                                    @onclick="Write">
+                                @(_writing ? "SE SCRIE" : "SCRIE TOT")
+                            </button>
+                        </div>
+                    </div>
+                    <table class="data">
+                        <tbody>
+                        @for (var i = 0; i < _writeBytes.Length; i++)
+                        {
+                            var index = i;
+                            <tr>
+                                <td class="faint">Octet @index</td>
+                                <td>
+                                    <input type="number" min="0" max="255" value="@_writeBytes[index]"
+                                           disabled="@(!Plc.CanCommandManually)"
+                                           style="width:100%;background:var(--bg-inset);border:1px solid var(--line);
+                                                  border-radius:6px;color:var(--text);padding:5px 8px;text-align:right;
+                                                  user-select:text"
+                                           @onchange="e => _writeBytes[index] = ParseByte(e.Value, _writeBytes[index])"/>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            @if (_message is { Length: > 0 })
+            {
+                <p class="faint" style="margin-top:12px;font-size:12px">@_message</p>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private readonly int[] _writeBytes = new int[8];
+    private bool _writing;
+    private string? _message;
+
+    private IoState Io => Plc.Machine.Io;
+
+    private int SignalPercent => Math.Clamp(Io.RfidSignalLevel * 100 / 255, 0, 100);
+
+    private async Task Read()
+    {
+        _message = await Plc.PulseFlagAsync(PlcSymbols.RfidRead)
+            ? "Citire ceruta."
+            : "Citirea nu a putut fi trimisa.";
+    }
+
+    private void LoadFromTag()
+    {
+        for (var i = 0; i < _writeBytes.Length; i++)
+            _writeBytes[i] = Io.RfidReadBytes[i];
+    }
+
+    private async Task Write()
+    {
+        if (_writing) return;
+        _writing = true;
+        try
+        {
+            for (var i = 0; i < _writeBytes.Length; i++)
+            {
+                if (!await Plc.SetIntAsync(PlcSymbols.RfidWriteByte(i), _writeBytes[i]))
+                {
+                    _message = $"Octetul {i} nu a putut fi scris; scrierea a fost oprita.";
+                    return;
+                }
+            }
+
+            _message = await Plc.PulseFlagAsync(PlcSymbols.RfidWrite)
+                ? "Scriere ceruta."
+                : "Octetii au fost pusi, dar comanda de scriere nu a plecat.";
+        }
+        finally
+        {
+            _writing = false;
+        }
+    }
+
+    private static int ParseByte(object? value, int fallback) =>
+        int.TryParse(value?.ToString(), out var parsed) ? Math.Clamp(parsed, 0, 255) : fallback;
+}

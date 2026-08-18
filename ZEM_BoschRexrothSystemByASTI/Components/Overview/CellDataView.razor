@@ -1,0 +1,212 @@
+@inherits PlcComponentBase
+@using System.Globalization
+@inject UiState Ui
+@inject NavigationManager Nav
+
+@* The system state in figures: the effectors, the colour sensor, the columns, the pallets and the
+   analog values. *@
+
+<div class="panel" style="margin-bottom:14px">
+    <div class="body">
+        <div class="effectors">
+            <div class="effector">
+                <div class="effector-label">GRIPPER</div>
+                @if (Cell.PalletById(Cell.InGripper) is { } held)
+                {
+                    <div class="effector-held">
+                        <SlotGrid Slots="held.Slots" Size="md"/>
+                        <span>are o paleta</span>
+                    </div>
+                }
+                else
+                {
+                    <div class="effector-empty">gol</div>
+                }
+            </div>
+
+            <div class="effector">
+                <div class="effector-label">VACUUM</div>
+                @if (Cell.VacuumHoldsObject)
+                {
+                    <div class="vacuum-held">
+                        <span class="vacuum-dot" style="@Cell.InVacuum.FillStyle()"></span>
+                        <span class="vacuum-name">@Cell.InVacuum.Label()</span>
+                    </div>
+                }
+                else
+                {
+                    <div class="effector-empty">gol</div>
+                }
+            </div>
+
+            <div class="effector">
+                <div class="effector-label">SENZOR DE CULOARE</div>
+                @if (SensedStyle is { } style)
+                {
+                    <div class="vacuum-held">
+                        <span class="vacuum-dot" style="@style"></span>
+                        <span class="vacuum-name">@SensedName</span>
+                    </div>
+                }
+                else
+                {
+                    <div class="effector-empty">nimic</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="panel" style="margin-bottom:14px">
+    <div class="body">
+        <div class="grid cols-rows">
+            @foreach (var region in PlcEnums.AllRegions)
+            {
+                <RowCard Cell="Cell" Region="region"/>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="panel" style="margin-bottom:14px">
+    <div class="body">
+        <div class="grid cards">
+            @foreach (var pallet in Cell.Pool)
+            {
+                <PalletCard Pallet="pallet"
+                            Location="@Cell.LocationOf(pallet.VirtualId)"
+                            Highlight="@(Cell.InGripper == pallet.VirtualId)"/>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="panel">
+    <header>
+        <h2>Coloane</h2>
+        <span class="faint">pozitia 0 e in fata, acolo ajunge bratul</span>
+    </header>
+    <div class="body table-scroll">
+        <table class="data">
+            <thead>
+            <tr>
+                <th>Coloana</th>
+                <th class="num">Paleti</th>
+                @for (var i = 0; i < RowState.MaxCapacity; i++)
+                {
+                    <th class="num">@(i == 0 ? "Fata" : $"Poz. {i}")</th>
+                }
+                <th class="num">La pullere</th>
+                <th class="num" title="obiecte lasate de brat in cosul lateral">In cos</th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var region in PlcEnums.AllRegions)
+            {
+                var row = Cell.Rows[region];
+                <tr>
+                    <td>@region.Label()</td>
+                    <td class="num"><b>@row.Count</b> / @row.Capacity</td>
+                    @for (var i = 0; i < RowState.MaxCapacity; i++)
+                    {
+                        var index = i;
+                        <td class="num">
+                            @if (index < row.Count)
+                            {
+                                <span>@row.PalletIds[index]</span>
+                            }
+                            else
+                            {
+                                <span class="faint">—</span>
+                            }
+                        </td>
+                    }
+                    <td class="num">
+                        @if (region == Region.Center)
+                        {
+                            <span class="faint">n/a</span>
+                        }
+                        else
+                        {
+                            <BoolLed Value="row.IsAtFront" Tone="BoolLed.LedTone.Warn"
+                                     OnText="DA" OffText="nu"/>
+                        }
+                    </td>
+                    <td class="num">@row.DroppedCount</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="grid cols-analog" style="margin-top:14px">
+    <div class="panel">
+        <header><h2>Intrari analogice</h2></header>
+        <div class="body">
+            <div class="gauges">
+                @for (var i = 0; i < Io.AnalogIn.Length; i++)
+                {
+                    var index = i;
+                    <Gauge Name="@($"Intrarea {index + 1}")" Value="@Volts(Io.AnalogIn[index])" Max="10" Unit="V"/>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="panel" style="align-self:start">
+        <header>
+            <h2>Iesiri analogice</h2>
+            <button class="link-btn" @onclick="GoToAnalogWrite">se scriu din Control manual</button>
+        </header>
+        <div class="body">
+            <div class="gauges">
+                @for (var i = 0; i < Io.AnalogOut.Length; i++)
+                {
+                    var index = i;
+                    <Gauge Name="@($"Iesirea {index + 1}")"
+                           Value="@(Hmi.AnalogOutValue[index] / 1000.0)" Max="10" Unit="V"/>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private IoState Io => Plc.Machine.Io;
+    private HmiState Hmi => Plc.Machine.Hmi;
+
+    /// <summary>
+    /// The outputs are read here and written elsewhere. The section is selected first, then the page
+    /// is jumped to - the same route the menu takes.
+    /// </summary>
+    private void GoToAnalogWrite()
+    {
+        Ui.Select("manual", "Analogice");
+        Nav.NavigateTo("manual");
+    }
+
+    private ObjectType? Sensed
+    {
+        get
+        {
+            for (var i = 0; i < IoState.ColorSensorTypes.Length; i++)
+                if (Io.ColorSensors[i])
+                    return IoState.ColorSensorTypes[i];
+            return null;
+        }
+    }
+
+    private string SensedName => Sensed?.Label() ?? "—";
+
+    /// <summary>
+    /// Only the seven sensor lines. It used to fall back on the PLC's ARGB word, but that is a
+    /// display register: it keeps the last object's colour long after the object is gone, and it
+    /// has no name to go with it - so the panel showed a coloured dot next to a dash, which is
+    /// neither a reading nor nothing.
+    /// </summary>
+    private string? SensedStyle => Sensed?.FillStyle();
+
+    /// <summary>The gauges are 0..10 V; the raw word is the full range of a 12 bit card.</summary>
+    private static double Volts(int raw) => Math.Clamp(raw * 10.0 / 4095.0, 0, 10);
+}

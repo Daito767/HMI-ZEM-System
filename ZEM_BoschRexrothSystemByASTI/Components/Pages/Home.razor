@@ -1,0 +1,175 @@
+@page "/"
+@inherits PlcComponentBase
+
+<PageTitle>Home</PageTitle>
+
+@if (Plc.LastError is { Length: > 0 } error)
+{
+    <div class="banner bad">
+        <strong>Legatura cu PLC-ul</strong>
+        <span class="dim">@error</span>
+    </div>
+}
+
+@if (Diag.Active)
+{
+    <div class="banner bad">
+        <strong>Oprire neconfirmata</strong>
+        <span class="dim">@Diag.Last.Code.Label()</span>
+        <span class="spacer"></span>
+        <a class="btn" href="service">Deschide diagnosticul</a>
+    </div>
+}
+
+<div class="panel" style="margin-bottom:14px">
+    <header>
+        <h2>Comanda ciclu</h2>
+        <span class="spacer"></span>
+        @* The mode is spelled out in the top bar; here it sits only so it can be seen next to the buttons. *@
+        <div class="lamps-row compact">
+            <Lamp Name="Auto" State="in ciclu" On="Cell.Run" Tone="good"/>
+            <Lamp Name="Manual" State="oprita" On="@(!Cell.Run && !Cell.ResetStarted)" Tone="warn"/>
+        </div>
+    </header>
+    <div class="body">
+        <div class="actions">
+            <div class="commands">
+                @* Button_Start is a level flag: held while the cell runs, it restarts it after every
+                   pause. The PLC ignores it in cycle anyway, so the button has to look blocked. *@
+                <button class="cmd start" disabled="@(!Plc.CanSendCommands || Cell.Run || Cell.ResetStarted)"
+                        @onclick="() => Send(PlcCommand.Start)">START</button>
+                @* Pause has nothing to stop while the cell is not running. The PLC publishes no pause
+                   flag, so `Run` false means both "stopped" and "paused" — in either, the button makes
+                   no sense. *@
+                <button class="cmd pause" disabled="@(!Plc.CanSendCommands || !Cell.Run)"
+                        @onclick="() => Send(PlcCommand.Pause)">PAUZA</button>
+                <button class="cmd endstep" disabled="@(!Plc.CanSendCommands || !Cell.Run)"
+                        @onclick="() => Send(PlcCommand.EndStepPause)">PAUZA LA FINAL DE&nbsp;PAS</button>
+                @* Reset is asked for with the cell stopped. The PLC publishes no pause flag - `Run`
+                   false means both "paused" and "stopped" - so this is as far as they can be told apart. *@
+                <button class="cmd reset" disabled="@(!Plc.CanSendCommands || Cell.Run || Cell.ResetStarted)"
+                        @onclick="() => Send(PlcCommand.Reset)">RESET</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Both tables are the same decision, taken once per colour and once per pallet. What each column
+   means is written once, in the table head. *@
+<div class="panel">
+    <header><h2>Sortare</h2></header>
+    <div class="body">
+        <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(330px,1fr))">
+            <div class="table-fit">
+                <h3>Pe culoare</h3>
+                <table class="data tight">
+                    <thead>
+                    <tr>
+                        <th>Culoare</th>
+                        <th class="num">Nr.</th>
+                        <th class="mid">Lasa</th>
+                        <th class="mid">Stanga</th>
+                        <th class="mid">Dreapta</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var type in SortableColors)
+                    {
+                        var objectType = type;
+                        var current = Plc.Policies.DropObject[(int)objectType];
+                        <tr>
+                            <td>
+                                <span class="color-pill" style="@objectType.FillStyle();color:@TextOn(objectType)">
+                                    @objectType.Label()
+                                </span>
+                            </td>
+                            <td class="num">@Plc.Machine.Hmi.CountOf(objectType)</td>
+                            @for (var option = 0; option <= 2; option++)
+                            {
+                                var value = option;
+                                <td class="mid">
+                                    <input class="pick" type="radio" name="@($"policy-{(int)objectType}")"
+                                           checked="@(current == value)"
+                                           disabled="@(!Plc.CanSendCommands)"
+                                           @onchange="() => SetObjectPolicy(objectType, value)"/>
+                                </td>
+                            }
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="table-fit">
+                <h3>Pe paleta</h3>
+                <table class="data tight">
+                    <thead>
+                    <tr>
+                        <th>Paleta</th>
+                        <th class="mid">Stanga</th>
+                        <th class="mid">Dreapta</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @for (var i = 0; i < PolicyState.PalletPolicyCount; i++)
+                    {
+                        var index = i;
+                        var current = Plc.Policies.DropPallet[index];
+                        <tr>
+                            <td>@(index + 1)</td>
+                            <td class="mid">
+                                <input class="pick" type="radio" name="@($"pallet-{index}")"
+                                       checked="@(current == 0)"
+                                       disabled="@(!Plc.CanSendCommands)"
+                                       @onchange="() => SetPalletPolicy(index, 0)"/>
+                            </td>
+                            <td class="mid">
+                                <input class="pick" type="radio" name="@($"pallet-{index}")"
+                                       checked="@(current != 0)"
+                                       disabled="@(!Plc.CanSendCommands)"
+                                       @onchange="() => SetPalletPolicy(index, 1)"/>
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    /// <summary>
+    /// NoColor(2) through Black(9). Unknown is left out on purpose: PickObject never produces it -
+    /// it turns an unscanned object into NoColor - so a policy for it would never be read.
+    /// </summary>
+    private static readonly ObjectType[] SortableColors =
+    {
+        ObjectType.NoColor, ObjectType.Red, ObjectType.Green, ObjectType.Cyan,
+        ObjectType.Gray, ObjectType.Orange, ObjectType.White, ObjectType.Black
+    };
+
+    /// <summary>White, cyan, grey and orange pills need dark text to stay readable.</summary>
+    private static string TextOn(ObjectType type) => type switch
+    {
+        ObjectType.White or ObjectType.Cyan or ObjectType.Gray or ObjectType.Orange
+            or ObjectType.NoColor => "#12161d",
+        _ => "#ffffff"
+    };
+
+    private async Task Send(PlcCommand command) => await Plc.SendAsync(command);
+
+    private async Task SetObjectPolicy(ObjectType type, int policy)
+    {
+        Plc.Policies.DropObject[(int)type] = policy;
+        await Plc.SetIntAsync(PlcSymbols.DropObjectPolicy((int)type), policy);
+        await Plc.RefreshPoliciesAsync();
+    }
+
+    private async Task SetPalletPolicy(int index, int policy)
+    {
+        Plc.Policies.DropPallet[index] = policy;
+        await Plc.SetIntAsync(PlcSymbols.DropPalletPolicy(index), policy);
+        await Plc.RefreshPoliciesAsync();
+    }
+}

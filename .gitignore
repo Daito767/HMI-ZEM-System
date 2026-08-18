@@ -1,0 +1,49 @@
+# ---- .NET / MAUI build ----
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+*.binlog
+*.user
+*.suo
+*.userprefs
+*.cache
+
+# ---- IDE ----
+.vs/
+.idea/
+*.swp
+*~
+
+# ---- Claude Code (local settings) ----
+.claude/settings.local.json
+
+# ---- Android / MAUI publish ----
+*.keystore
+*.jks
+*.apk
+*.aab
+*.appx
+*.appxbundle
+*.msix
+[Pp]ublish/
+[Aa]rtifacts/
+
+# ---- NuGet ----
+*.nupkg
+*.snupkg
+packages/
+!packages/build/
+
+# ---- OS ----
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# ---- Old material, kept on disk only (decided 2026-08-18) ----
+# PLC/   = the old HMI (JS+SVG), the stand photos, and 3 .md files already in docs/
+# attic/ = pages taken out of the build, kept on disk on purpose
+PLC/
+attic/

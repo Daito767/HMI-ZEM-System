@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Cele patru sloturi ale unei palete, asezate ca in tabul Valori: randul din spate sus, cel din
+     fata jos. Sus-stanga e celula nescanata, cu conturul rosu punctat si semnul intrebarii, restul
+     sunt obiecte. Culorile sunt din aceeasi paleta ca interfata (ObjectType.Fill si .slot.unknown).
+
+     Blocul are 200 din 456 si sta in mijloc: masca de icoana adaptiva de pe Android taie in afara
+     unui cerc de vreo 300, iar un bloc mai mare ramane fara colturi. -->
+<svg width="456" height="456" viewBox="0 0 456 456" version="1.1" xmlns="http://www.w3.org/2000/svg">
+    <!-- nescanat -->
+    <rect x="128" y="128" width="92" height="92" rx="14"
+          fill="#990000" fill-opacity="0.25" stroke="#b0343a" stroke-width="3" stroke-dasharray="9 7"/>
+    <path d="M161,160 A13,13 0 0 1 187,160 C187,173 174,173 174,183"
+          fill="none" stroke="#e8888c" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="174" cy="196" r="5" fill="#e8888c"/>
+
+    <!-- alb -->
+    <rect x="236" y="128" width="92" height="92" rx="14" fill="#FFFFFF"/>
+    <!-- alb -->
+    <rect x="128" y="236" width="92" height="92" rx="14" fill="#FFFFFF"/>
+    <!-- rosu -->
+    <rect x="236" y="236" width="92" height="92" rx="14" fill="#FF0000"/>
+</svg>

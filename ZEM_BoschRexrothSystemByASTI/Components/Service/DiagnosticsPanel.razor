@@ -1,0 +1,132 @@
+@inherits PlcComponentBase
+
+@* The banner shows only when there is an unacknowledged halt. Its absence is the good news. *@
+@if (Diag.Active)
+{
+    <div class="banner bad">
+        <strong>OPRIRE ACTIVA</strong>
+        <span class="mono">@Diag.Last.Source</span>
+        <span class="dim">pas @Diag.Last.Step</span>
+        <span class="spacer"></span>
+        <span class="pill bad"><span class="led"></span><span class="value">@Diag.Last.Code.Label()</span></span>
+    </div>
+}
+
+<div class="grid cols-2">
+    <div class="panel">
+        <header><h2>Ultima oprire</h2></header>
+        <div class="body">
+            <table class="data">
+                <tbody>
+                <tr>
+                    <td>Sursa</td>
+                    <td class="mono">@(Diag.Last.Source is { Length: > 0 } ? Diag.Last.Source : "—")</td>
+                </tr>
+                <tr>
+                    <td>Pas</td>
+                    <td class="num">@Diag.Last.Step</td>
+                </tr>
+                <tr>
+                    <td>Cauza</td>
+                    <td>
+                        @Diag.Last.Code.Label()
+                        <span class="faint mono">@Diag.Last.Code.Name()</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Ciclu</td>
+                    <td class="num">@Diag.Last.Cycle</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="panel">
+        <header><h2>Contoare</h2></header>
+        <div class="body">
+            <table class="data">
+                <tbody>
+                <tr><td>Opriri inregistrate</td><td class="num">@Diag.Count / @DiagSnapshot.HistorySize</td></tr>
+                <tr><td>Ciclu MainTask</td><td class="num">@Diag.Cycle</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="panel" style="margin-top:14px">
+    <header>
+        <h2>Istoricul opririlor</h2>
+    </header>
+    <div class="body table-scroll">
+        <div class="actions">
+            <div class="commands">
+                <button class="btn" disabled="@(_loading || !Plc.CanSendCommands)" @onclick="Load">
+                    @(_loading ? "Se citeste..." : "Reciteste")
+                </button>
+            </div>
+        </div>
+
+        @if (Diag.History.Length == 0)
+        {
+            <p class="faint">Istoricul nu a putut fi citit.</p>
+        }
+        else
+        {
+            <table class="data">
+                <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Ciclu</th>
+                    <th>Sursa</th>
+                    <th class="num">Pas</th>
+                    <th>Cauza</th>
+                </tr>
+                </thead>
+                <tbody>
+                @{
+                    var index = 0;
+                }
+                @foreach (var entry in Diag.HistoryNewestFirst())
+                {
+                    index++;
+                    <tr>
+                        <td class="faint">@index</td>
+                        <td class="num">@entry.Cycle</td>
+                        <td class="mono">@(entry.Source is { Length: > 0 } ? entry.Source : "—")</td>
+                        <td class="num">@entry.Step</td>
+                        <td>
+                            @entry.Code.Label()
+                            <span class="faint mono">@entry.Code.Name()</span>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+
+            @if (Diag.Count == 0)
+            {
+                <p class="faint" style="margin-top:10px">Nicio oprire inregistrata.</p>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private bool _loading;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // The panel is the trigger: opening it is what the heavy node is read for.
+        await Load();
+    }
+
+    private async Task Load()
+    {
+        if (_loading) return;
+        _loading = true;
+        try { await Plc.RefreshHistoryAsync(); }
+        finally { _loading = false; }
+    }
+}

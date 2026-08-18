@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Semnul aplicatiei, dar in subsetul pe care Android il poate transforma in vector drawable:
+     numai cai umplute. Fara dreptunghiuri, fara cercuri, fara contur si mai ales fara linii
+     punctate - conversia le sare, si atunci ecranul iese o culoare goala.
+
+     De aceea celula nescanata e aici plina, nu punctata cu semnul intrebarii ca in icoana: pe
+     ecranul de pornire, desenat de sistem si taiat in cerc, oricum nu s-ar citi.
+
+     Numele si autorul stau in ecranul de incarcare din `wwwroot/index.html`. -->
+<svg width="456" height="456" viewBox="0 0 456 456" version="1.1" xmlns="http://www.w3.org/2000/svg">
+    <path d="M142,128 H206 A14,14 0 0 1 220,142 V206 A14,14 0 0 1 206,220 H142 A14,14 0 0 1 128,206 V142 A14,14 0 0 1 142,128 Z"
+          fill="#6d2226"/>
+    <path d="M250,128 H314 A14,14 0 0 1 328,142 V206 A14,14 0 0 1 314,220 H250 A14,14 0 0 1 236,206 V142 A14,14 0 0 1 250,128 Z"
+          fill="#FFFFFF"/>
+    <path d="M142,236 H206 A14,14 0 0 1 220,250 V314 A14,14 0 0 1 206,328 H142 A14,14 0 0 1 128,314 V250 A14,14 0 0 1 142,236 Z"
+          fill="#FFFFFF"/>
+    <path d="M250,236 H314 A14,14 0 0 1 328,250 V314 A14,14 0 0 1 314,328 H250 A14,14 0 0 1 236,314 V250 A14,14 0 0 1 250,236 Z"
+          fill="#FF0000"/>
+</svg>

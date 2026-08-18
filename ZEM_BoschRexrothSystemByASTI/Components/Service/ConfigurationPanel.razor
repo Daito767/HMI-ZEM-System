@@ -1,0 +1,180 @@
+@inherits PlcComponentBase
+@using System.Globalization
+
+@* The page command lives in its own band, not hung off a banner. *@
+<div class="actions">
+    <div class="commands">
+        <button class="btn" disabled="@(!Plc.CanSendCommands)" @onclick="Reload">Reciteste</button>
+    </div>
+</div>
+
+<div class="banner">
+    <strong>Valorile nu se pot modifica din HMI</strong>
+</div>
+
+<div class="grid cols-2">
+    <div class="panel">
+        <header><h2>Arm · Pos <span class="faint">(REAL, mm)</span></h2></header>
+        <div class="body">
+            <table class="data">
+                <tbody>
+                @foreach (var (name, value) in ArmPositions)
+                {
+                    <tr>
+                        <td>@name</td>
+                        <td class="num">@Num(value)</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="panel">
+        <header><h2>Arm · Motion <span class="faint">(LREAL)</span></h2></header>
+        <div class="body">
+            <table class="data">
+                <tbody>
+                @foreach (var (name, value) in ArmMotion)
+                {
+                    <tr>
+                        <td>@name</td>
+                        <td class="num">@Num(value)</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="panel">
+        <header><h2>Arm · timpi si optiuni</h2></header>
+        <div class="body">
+            <table class="data">
+                <tbody>
+                <tr><td>VacuumDetectionTimeout</td><td class="num">@Ms(Config.Arm.VacuumDetectionTimeout)</td></tr>
+                <tr><td>ResetSettleTime</td><td class="num">@Ms(Config.Arm.ResetSettleTime)</td></tr>
+                <tr><td>ResetStopTimeout</td><td class="num">@Ms(Config.Arm.ResetStopTimeout)</td></tr>
+                <tr><td>KeepPoweredAfterMove</td><td class="num">@(Config.Arm.KeepPoweredAfterMove ? "TRUE" : "FALSE")</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="panel">
+        <header><h2>Conveyor · Dist <span class="faint">(REAL, mm)</span></h2></header>
+        <div class="body">
+            <table class="data">
+                <tbody>
+                @foreach (var (name, value) in ConveyorDistances)
+                {
+                    <tr>
+                        <td>@name</td>
+                        <td class="num">@Num(value)</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="panel">
+        <header><h2>Conveyor · Motion <span class="faint">(LREAL)</span></h2></header>
+        <div class="body">
+            <table class="data">
+                <tbody>
+                @foreach (var (name, value) in ConveyorMotion)
+                {
+                    <tr>
+                        <td>@name</td>
+                        <td class="num">@Num(value)</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="panel">
+        <header><h2>Conveyor · reglaje si ordinea sloturilor</h2></header>
+        <div class="body">
+            <table class="data">
+                <tbody>
+                <tr><td>SlowDownFactor</td><td class="num">@Num(Config.Conveyor.SlowDownFactor)</td></tr>
+                <tr><td>SlowDownMargin</td><td class="num">@Num(Config.Conveyor.SlowDownMargin)</td></tr>
+                <tr><td>PositionTolerance</td><td class="num">@Num(Config.Conveyor.PositionTolerance)</td></tr>
+                @for (var i = 0; i < Config.SlotOrder.Length; i++)
+                {
+                    var slot = Config.SlotOrder[i];
+                    <tr>
+                        <td>Main.SlotOrder[@i]</td>
+                        <td class="num">
+                            <span class="mono">@slot</span>
+                            <span class="faint">@slot.Label()</span>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@if (Config.LoadedAt is null)
+{
+    <p class="faint" style="margin-top:12px;font-size:12px">Configuratia nu a putut fi citita.</p>
+}
+
+@code {
+    private IEnumerable<(string Name, double Value)> ArmPositions =>
+        Config.Arm.NamedPositions()
+            .Concat(new[]
+            {
+                ("TravelMin", Config.Arm.TravelMin),
+                ("TravelMax", Config.Arm.TravelMax),
+                ("JogMin", Config.Arm.JogMin),
+                ("JogMax", Config.Arm.JogMax)
+            });
+
+    private IEnumerable<(string Name, double Value)> ArmMotion => new[]
+    {
+        ("MoveVelocity", Config.Arm.MoveVelocity),
+        ("MoveAccel", Config.Arm.MoveAccel),
+        ("MoveDecel", Config.Arm.MoveDecel),
+        ("MoveJerk", Config.Arm.MoveJerk),
+        ("JogVelocity", Config.Arm.JogVelocity),
+        ("JogAccel", Config.Arm.JogAccel),
+        ("JogDecel", Config.Arm.JogDecel),
+        ("JogJerk", Config.Arm.JogJerk),
+        ("StopDecel", Config.Arm.StopDecel)
+    };
+
+    private IEnumerable<(string Name, double Value)> ConveyorDistances => new[]
+    {
+        ("FirstRow", Config.Conveyor.FirstRow),
+        ("SecondRow", Config.Conveyor.SecondRow),
+        ("RFID", Config.Conveyor.Rfid),
+        ("Storage", Config.Conveyor.Storage),
+        ("PalletOffset", Config.Conveyor.PalletOffset)
+    };
+
+    private IEnumerable<(string Name, double Value)> ConveyorMotion => new[]
+    {
+        ("MoveVelocity", Config.Conveyor.MoveVelocity),
+        ("MoveAccel", Config.Conveyor.MoveAccel),
+        ("MoveDecel", Config.Conveyor.MoveDecel),
+        ("MoveJerk", Config.Conveyor.MoveJerk),
+        ("JogVelocity", Config.Conveyor.JogVelocity),
+        ("JogAccel", Config.Conveyor.JogAccel),
+        ("JogDecel", Config.Conveyor.JogDecel),
+        ("JogJerk", Config.Conveyor.JogJerk),
+        ("StopDecel", Config.Conveyor.StopDecel)
+    };
+
+    private static string Num(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
+
+    private static string Ms(TimeSpan value) =>
+        value.TotalMilliseconds.ToString("0", CultureInfo.InvariantCulture) + " ms";
+
+    private async Task Reload() => await Plc.RefreshConfigAsync();
+}
