@@ -7,6 +7,12 @@ target — and on Windows.
 It replaces the CODESYS visualization that used to run on the stand's own panel, so that the
 interface is no longer tied to the machine it watches.
 
+![The application on the Home tab](docs/images/app-home.png)
+
+The Home tab, with the cell stopped: the cycle commands at the top — only the ones that make sense
+right now are live — and the sorting rules underneath, one decision per colour and one per pallet.
+The rail on the left shows every tab unfolded, so the whole interface is one glance away.
+
 ## What the stand does
 
 Three columns hold pallets: left, the belt, right. A storage magazine feeds the belt from the back,
@@ -26,6 +32,12 @@ the cycle is stopped.
 | `ZEM_BoschRexrothSystemByASTI/wwwroot/cell/` | 100 SVG drawings of the stand, stacked as layers |
 | `HMI-HANDOFF.md` | the handover document: structure, style decisions, safety rules, the traps already paid for |
 | `docs/` | the PLC variables, the logic behind each button, and the operator manual |
+| `tools/make-figures.py` | renders `docs/images/` out of the application itself |
+
+The images in `docs/images/` are not mock-ups. The stand is composed from the very SVG layers the
+application loads, with the pallets at the positions `StandGeometry` computes; the interface is
+rendered with the application's own `app.css` and markup taken from the Razor components. Run
+`python tools/make-figures.py` after changing the theme or the drawings, and they follow.
 
 ## Two things worth knowing before reading the code
 
