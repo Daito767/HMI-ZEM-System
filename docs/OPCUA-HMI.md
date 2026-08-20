@@ -171,8 +171,9 @@ sequence logic, and with no watchdog on the link.
 | RFID data | `RFID_Read_Byte_0..7`, `RFID_Write_Byte_0..7`, `RFID_Command`, `RFID_Address`, `RFID_Block_Number` |
 | spare outputs | `DO02`, `DO03`, `DO11`..`DO16` |
 
-The `*_Cmd` commands are **read** — the Pneumatic page shows the state of each
-solenoid valve — but cannot be written.
+The `*_Cmd` commands are **read and written**: the Pneumatic page shows the state
+of each solenoid valve and commands it. Press-and-hold and only while the cell is
+stopped — see §5, the price is that you command the pneumatics over the sequence.
 
 The belt position is composed as in `FB_ConveyorController.GetCenterDistance`:
 

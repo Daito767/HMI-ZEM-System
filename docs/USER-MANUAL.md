@@ -360,12 +360,14 @@ pushing does not work.
 
 Measured on this stand, at 100 ms requested, values arrived between 7 and 336 ms apart, averaging
 135 ms. This is not a network problem on the tablet and it is not solved by raising or lowering the
-interval at random.
+interval at random. **Service → Simboluri** shows the same spread for the session you are in —
+smallest, largest and average gap between two arrivals — so you can see what the link is doing right
+now instead of taking the numbers above on trust.
 
-The **Service → Simboluri** page now also shows the **sampling interval the server granted** — how
-often the server looks at the value. If that number is larger than the requested interval, that is
-the explanation: values arrive on time, but they are already stale when they leave. That is where
-the search continues. **The investigation is not closed.**
+The same page also shows the **sampling interval the server granted** — how often the server looks
+at the value. If that number is larger than the requested interval, that is the explanation: values
+arrive on time, but they are already stale when they leave. That is where the search continues.
+**The investigation is not closed.**
 
 ---
 

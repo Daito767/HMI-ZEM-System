@@ -143,7 +143,11 @@ limit. Because of that:
 
 - the jog and the solenoid valves are **press-and-hold** (`HoldButton`), with `FALSE` on release;
 - `PlcService.ReleaseAllFlagsAsync()` is called when the page is left, on blur / hide / close through
-  `hmi.js`, and before any disconnection;
+  `hmi.js`, and before any disconnection. It drops `PlcSymbols.CommandFlags` **and**
+  `PlcSymbols.ValveCommands` — a valve is a command too, and a gripper left closed holds a pallet
+  nobody is tracking any more;
+- lowering a flag is never refused (`PlcService.SetFlagAsync`): raising one needs
+  `CanCommandManually`, dropping one has to work even if the cell started running in the meantime;
 - the flags that re-arm (`ArmMoveAbsolute`, `ArmMoveRelative`, `RfidRead`, `RfidWrite`,
   `WriteAO1/2`, `*SetPower`) are sent as a **pulse**, not as a level;
 - manual commands are blocked while `Main.Run` or `Main.ResetStarted` is true — the PLC does the
@@ -235,6 +239,15 @@ server that refuses the subscription, nodes it did not accept, a subscription th
 publishing. **A frozen picture has to become a slow picture, never a wrong one** — otherwise the HMI
 shows "CONECTAT" over a cell that has moved in the meantime.
 
+**The loop waits for the publish, not for a clock of its own.** `PlcService.WaitForWorkAsync` blocks
+on `OpcUaPlcClient.WaitForPublishAsync` while the subscription is live, and on a plain delay when it
+is not. Two clocks that are not the same clock drift against each other, and the drift lands in the
+picture: one pass takes a value the moment it arrived, the next takes one that has been sitting
+there, so the steps come out uneven however fast the values are. The timeout is four publishing
+intervals and it is only a way out — when publishing stops the wait ends, the next cycle finds the
+subscription no longer live, and everything goes back to reading. `Plc.UpdatePeriodMs` is read from
+the same place, which is what makes a drawing's step exactly as long as the wait for the next value.
+
 The heavy groups (`DiagHistory`, `ColorNames`, `Config`, `Policies`) stay plain reads: they are asked
 for once or on demand, and monitoring them would cost the server for nothing.
 
@@ -252,7 +265,10 @@ number of values` is 100 — if more nodes than that change at once, the rest ar
 publish, so nothing is lost, it is only late.
 
 The **Service → Simboluri** page says which of the two paths is in use, how many nodes the server is
-sending and at what interval.
+sending, at what interval, and the sampling interval it granted. `OnDataChange` also keeps the last
+32 gaps between publishes, so the page shows the measured spread — smallest, largest, average. That
+is where the 7…336 ms at a requested 100 ms comes from; it is one session's observation, not a
+measurement with a method behind it.
 
 ## The stand drawings
 

@@ -157,7 +157,7 @@ for its command**, side by side.
 
 (`Exist_Bacward_Near` is spelled that way in the project.)
 
-**The buttons here cannot be reproduced over OPC UA** — see §3.
+**The buttons here write the outputs directly** — see §3, and the rule in §4.
 
 ### 2.4 RFID — 50 elements
 
@@ -190,15 +190,20 @@ The `WHILE` loop is a blocking loop written on a button — it would block the P
 cycle. **Do not reproduce it in any form.** The flag variant is non-blocking and
 retracts the arm before moving it, which the loop did not do.
 
-**`IOs` is published read-only.** So:
+**`IOs` is published with its 29 `%Q` outputs writable**, which was not the case
+when this section was first written. Both places that used to be blocked have
+been reproduced since:
 
-- **the Pneumatic page becomes a mimic**: the sensors and the command states are
-  visible, but the buttons cannot command anything;
-- **RFID writing has no path**: the old page wrote `IOs.RFID_Write_Byte_0..7`
-  directly. The controller's intended interface is `RFID_Controller.WriteBytes`
-  (the comment in the code says so explicitly), and `HMI.RfidWriteValue` exists
-  for it — but **it is not wired to anything**. Without a change in the PLC, the
-  "write" button sends whatever is already in the process image.
+- **the Pneumatic page commands, it is not a mimic**: the buttons write
+  `IOs.*_Cmd` straight to the outputs, over any sequence logic. In the new HMI
+  they are press-and-hold and live only while the cell is stopped — §4;
+- **RFID writing has a path**: the new HMI writes `IOs.RFID_Write_Byte_0..7`
+  itself and then raises `HMI.RfidWrite`, which is what the old page did. What
+  has not changed is the PLC: the controller's intended interface is
+  `RFID_Controller.WriteBytes` (the comment in the code says so explicitly) and
+  `HMI.RfidWriteValue` exists for it, but **is still not wired to anything**. So
+  the bytes go through the process image, and `HMI.RfidWrite` sends whatever is
+  in it at that moment — which is what the HMI has just put there.
 
 **Two bindings in Motion are dead:** `Main.ArmController.JogVelocity` and
 `.MoveToPointVelocity` do not exist in `FB_ArmController`. They were replaced when
@@ -207,7 +212,8 @@ the configuration was refactored. The good source, already published:
 
 **The conveyor override** (`SetOverride.Enable`, `.VelFactor`) was written
 straight from the page, into the motion block. The controllers are published
-read-only, so it is not reproduced.
+`ReadWrite`, so nothing stops it technically — but writing into a motion block
+from outside is exactly what `OPCUA-HMI.md` §5 rules out. It is not reproduced.
 
 ---
 
