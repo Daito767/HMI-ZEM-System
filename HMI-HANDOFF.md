@@ -227,9 +227,9 @@ OPC UA Server` in the ctrlX web interface. Until then the connection fails with
 
 ## How the values reach the HMI
 
-**The server pushes them, the HMI no longer asks for them.** The loop groups (`CellLoop`,
-`MachineLoop`, `DiagLoop`, ~150 nodes) are monitored items in a single subscription; the client keeps
-the last value of each node, and a "read" has become a dictionary lookup. Decoding was left
+**The server pushes them, the HMI no longer asks for them.** The loop groups (`CellLoop` 78,
+`MachineLoop` 98 and `DiagLoop` 8 — 184 nodes) are monitored items in a single subscription; the
+client keeps the last value of each node, and a "read" has become a dictionary lookup. Decoding was left
 untouched: it still receives a `PlcValues`. Before, there were three reads per cycle, each a round
 trip over WiFi, and it was exactly the scatter of that wait that showed up as a picture that sits
 still and then jumps.
