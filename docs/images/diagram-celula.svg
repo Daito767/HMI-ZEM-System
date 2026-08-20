@@ -1,0 +1,59 @@
+<svg viewBox="0 0 560 292" xmlns="http://www.w3.org/2000/svg" role="img"
+     font-family="Segoe UI, Calibri, sans-serif">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6"
+            markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8a929e"/>
+    </marker>
+  </defs>
+
+  <!-- magazia, in spate -->
+  <rect x="212" y="10" width="136" height="34" rx="4" fill="#e8ebf0" stroke="#c2c7d0"/>
+  <text x="280" y="32" text-anchor="middle" font-size="12" fill="#14181f">Magazie</text>
+  <line x1="280" y1="44" x2="280" y2="66" stroke="#8a929e" stroke-width="1.4"
+        marker-end="url(#ar)"/>
+
+  <!-- cele trei coloane -->
+  <g stroke="#c2c7d0" fill="#f4f6f9">
+    <rect x="44"  y="68" width="136" height="170" rx="4"/>
+    <rect x="212" y="68" width="136" height="170" rx="4"/>
+    <rect x="380" y="68" width="136" height="170" rx="4"/>
+  </g>
+
+  <g font-size="11.5" text-anchor="middle" fill="#14181f">
+    <text x="112" y="86">Coloana stanga</text>
+    <text x="280" y="86">Banda</text>
+    <text x="448" y="86">Coloana dreapta</text>
+  </g>
+  <g font-size="10" text-anchor="middle" fill="#8a929e">
+    <text x="112" y="99">-1</text>
+    <text x="280" y="99">0</text>
+    <text x="448" y="99">1</text>
+  </g>
+
+  <!-- paletii: pozitia 0 e cea din fata, jos -->
+  <g stroke="#7fa8d8" fill="#cfe0f2">
+    <rect x="66" y="196" width="92" height="30" rx="3"/>
+    <rect x="66" y="162" width="92" height="30" rx="3"/>
+    <rect x="234" y="196" width="92" height="30" rx="3"/>
+    <rect x="402" y="196" width="92" height="30" rx="3"/>
+  </g>
+  <g font-size="10.5" text-anchor="middle" fill="#2c3a4d">
+    <text x="112" y="216">pozitia 0</text>
+    <text x="112" y="182">pozitia 1</text>
+    <text x="280" y="216">pozitia 0</text>
+    <text x="448" y="216">pozitia 0</text>
+  </g>
+
+  <!-- bratul, in fata -->
+  <rect x="44" y="252" width="472" height="30" rx="4" fill="#e8ebf0" stroke="#c2c7d0"/>
+  <text x="280" y="271" text-anchor="middle" font-size="12" fill="#14181f">
+    Bratul ajunge aici &mdash; in fata fiecarei coloane
+  </text>
+
+  <g stroke="#8a929e" stroke-width="1.4" fill="none">
+    <line x1="158" y1="238" x2="158" y2="250" marker-end="url(#ar)"/>
+    <line x1="280" y1="238" x2="280" y2="250" marker-end="url(#ar)"/>
+    <line x1="402" y1="238" x2="402" y2="250" marker-end="url(#ar)"/>
+  </g>
+</svg>

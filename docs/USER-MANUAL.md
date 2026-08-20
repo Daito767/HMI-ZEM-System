@@ -24,6 +24,10 @@ The application also starts **without the stand**, on an internal simulator with
 already in place. That is useful for getting familiar with the screens without moving anything real
 (section 3).
 
+![](images/stand-front.png)
+
+*The stand seen from the front, as **Stare sistem &rarr; Animat fata** draws it: the gantry, the pneumatic head with its claws, and a pallet on the belt below.*
+
 ---
 
 ## 2. What is always visible: the top bar
@@ -48,6 +52,10 @@ The `actualizat` clock is the quickest check that the picture is alive. If it st
 have stopped arriving, even if the bar still reads `CONECTAT`.
 
 Alarms appear here too, as red pills. See section 12.
+
+![](images/topbar.png)
+
+*The top bar, with the cell in cycle, the link alive and an air alarm sounding. The last pill is the time of the most recent value received.*
 
 ---
 
@@ -92,6 +100,10 @@ deliberate exceptions — **Pneumatic** and **Miscare → Alimentare** — where
 buttons, because there the state is not the result of pressing but the thing you read **before** you
 press.
 
+![](images/app-home.png)
+
+*The whole interface. The rail on the left carries every tab with its sections unfolded; the open tab fills the rest. Here the cell is stopped, so START and RESET are the live commands.*
+
 ---
 
 ## 5. Starting and stopping the automatic cycle
@@ -112,6 +124,10 @@ bar — they are there only so you do not have to move your eyes while pressing.
 **One thing to know:** after `PAUZA` the screen looks exactly as it does after an ordinary stop. The
 controller does not publish a separate paused state, so the HMI has no way of telling them apart.
 See section 16.
+
+![](images/cycle-buttons.png)
+
+*The same four buttons in the two situations. Whatever makes no sense at that moment is greyed out rather than hidden.*
 
 ---
 
@@ -157,6 +173,14 @@ The **Altele** panel shows the pallet distance, the arm position and the travel 
 **Viteze** panel shows the speeds configured in the stand. Both are **read-only** — they are changed
 in the PLC configuration, not from here.
 
+![](images/hold-button.png)
+
+*The jog buttons: free on the left, held down on the right. The axis moves only while a button looks like the one on the right.*
+
+![](images/app-manual.png)
+
+***Control manual &rarr; Pneumatic**: for each group, the sensors as lamps and their commands underneath. The lamps sit above the buttons here on purpose - that state is what you read before pressing.*
+
 ---
 
 ## 8. Commanding the pneumatics directly
@@ -179,6 +203,10 @@ The last two panels are read-only.
 
 The **command** lamps show what the PLC is asking for, and the position lamps show what the sensors
 answer. When a command is lit and the position does not change, that is where the problem is.
+
+![](images/lamps.png)
+
+*The lamps, with the meaning carried by colour: green a state that is well, yellow one that is active, red a fault, blue a command the PLC is asking for.*
 
 ---
 
@@ -238,6 +266,18 @@ Nothing animates internally. In practice that means **a part is drawn in the pos
 report**, not somewhere in between — and where the sensors cannot say "I am on my way", the drawing
 shows it as arrived. See section 16 for the concrete case of the pneumatic head.
 
+![](images/diagram-celula.svg)
+
+*How the cell is laid out: the storage feeds the belt from the back, and the arm reaches the front of each column. **Position 0 is always the front one** - where the arm works.*
+
+![](images/app-state.png)
+
+***Stare sistem &rarr; Valori**: the effectors at the top, then the three columns with what stands in them, a card per pallet, and the table underneath.*
+
+![](images/stand-top.png)
+
+*The same cell in **Animat sus**: the belt in the middle with a pallet arrived at the front, the side columns with theirs, and the arm passing over, see-through.*
+
 ---
 
 ## 12. The audible alarm
@@ -271,6 +311,10 @@ after starting the application.
 
 A link you closed on purpose (`DECONECTAT`) does not sound — the link alarm is for a link that was
 *lost*, not for one you did not ask for.
+
+![](images/alarm-pill.png)
+
+*The same alarm, before and after pressing it. Silenced, it stays on the bar: the sound went quiet, not the fault.*
 
 ---
 
@@ -336,6 +380,10 @@ the belt's limits and speeds, the timings, and the slot order.
 how many symbols bound out of how many, whether values are pushed by the server or polled by the
 application, how many nodes the server is sending and at what real interval.
 
+![](images/app-symbols.png)
+
+***Service &rarr; Simboluri**, the page to look at when you suspect the picture is lying: how many symbols bound, which of the two paths is delivering values, and at what real interval.*
+
 ---
 
 ## 16. Known limitations
@@ -368,6 +416,10 @@ The same page also shows the **sampling interval the server granted** — how of
 at the value. If that number is larger than the requested interval, that is the explanation: values
 arrive on time, but they are already stale when they leave. That is where the search continues.
 **The investigation is not closed.**
+
+![](images/diagram-piston.svg)
+
+*The three states of a piston with two end sensors. In the case on the right the pullers are drawn at half travel; the pneumatic head is not - it shows as raised, as if it had arrived.*
 
 ---
 

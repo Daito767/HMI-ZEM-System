@@ -59,11 +59,3 @@ $RECYCLE.BIN/
 # Romanian, written about this project rather than part of it, and it carries
 # figures generated from the application. Kept next to the repository, not in it.
 /articol/
-
-# ---- Material for documents kept outside this repository ----
-# tools/ renders figures for the Romanian operator manual and for the conference
-# paper, and neither of those is part of the application. The only image kept
-# here is the screenshot the README shows; the rest are made on demand.
-/tools/
-/docs/images/*
-!/docs/images/app-home.png

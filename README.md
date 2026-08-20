@@ -31,10 +31,14 @@ the cycle is stopped.
 | `ZEM_BoschRexrothSystemByASTI/Components/` | the four tabs, the panels, and the two animated stand views |
 | `ZEM_BoschRexrothSystemByASTI/wwwroot/cell/` | 100 SVG drawings of the stand, stacked as layers |
 | `HMI-HANDOFF.md` | the handover document: structure, style decisions, safety rules, the traps already paid for |
-| `docs/` | the PLC variables, the logic behind each button, and the operator manual |
+| `docs/` | the PLC variables, the logic behind each button, and the illustrated operator manual |
+| `tools/make-figures.py` | renders everything in `docs/images/` out of the application itself |
 
-The screenshot above is a render rather than a captured window, but not a mock-up: it goes through
-the application's own `app.css`, with markup taken from the Razor components.
+The pictures are renders rather than captured windows, but not mock-ups. The stand is composed from
+the very SVG layers the application loads, with the pallets where `StandGeometry` puts them; the
+interface goes through the application's own `app.css`, with markup taken from the Razor components.
+Run `python tools/make-figures.py` after changing the theme or the drawings and they follow — which
+is the point of keeping the generator here rather than alongside the documents that use it.
 
 ## Two things worth knowing before reading the code
 
