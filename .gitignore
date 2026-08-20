@@ -45,12 +45,17 @@ $RECYCLE.BIN/
 # ---- Old material, kept on disk only (decided 2026-08-18) ----
 # PLC/   = the old HMI (JS+SVG), the stand photos, and 3 .md files already in docs/
 # attic/ = pages taken out of the build, kept on disk on purpose
-PLC/
-attic/
+/PLC/
+/attic/
 
 # ---- The Romanian edition of the user manual ----
 # Everything in this repository is written in English. The manual the operator
 # actually receives is in Romanian, because the stand is operated in Romanian,
 # so its source and the PDF built from it are kept next to the project but out
 # of it. See the note in HMI-HANDOFF.md.
-manual-ro/
+/manual-ro/
+
+# ---- The conference paper ----
+# Romanian, written about this project rather than part of it, and it carries
+# figures generated from the application. Kept next to the repository, not in it.
+/articol/
